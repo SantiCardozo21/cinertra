@@ -233,6 +233,54 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .empty{color:var(--text4);font-size:13px;padding:20px 0;}
+
+/* ========== ANDROID TV OPTIMIZATION ========== */
+@media (min-width: 1280px) and (pointer: coarse), (min-width: 1280px) and (hover: none) {
+  .sidebar { width: 220px; }
+  .nav-item { padding: 14px 20px; font-size: 16px; gap: 14px; }
+  .nav-item i { font-size: 22px; }
+  .ch-card { width: 110px; height: 80px; }
+  .ch-logo { width: 52px; height: 52px; }
+  .ch-dot { width: 46px; height: 46px; font-size: 13px; }
+  .ch-name { font-size: 12px; }
+  .movie-card { width: 130px; }
+  .poster { width: 130px; height: 184px; }
+  .movie-title { font-size: 13px; }
+  .series-card { width: 180px; }
+  .series-thumb { width: 180px; height: 101px; }
+  .tv-card { padding: 18px 14px; }
+  .tv-logo { width: 60px; height: 60px; }
+  .tv-name { font-size: 14px; }
+  .tab { padding: 9px 18px; font-size: 14px; }
+  .content-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 18px; }
+  .panel-title { font-size: 22px; }
+  .player-title { font-size: 28px; }
+  .sinopsis { font-size: 15px; line-height: 1.9; }
+  .watch-btn { padding: 14px; font-size: 16px; }
+  .player-video-col { width: 340px; }
+  .ub-logo { font-size: 24px; }
+  .ub-code-num { font-size: 16px; letter-spacing: 3px; }
+  .ub-days-num { font-size: 16px; }
+  .user-bar { height: 64px; padding: 0 28px; }
+}
+
+/* FOCO PARA CONTROL REMOTO */
+.focusable:focus, .nav-item:focus, .tab:focus, .ch-card:focus,
+.movie-card:focus, .series-card:focus, .tv-card:focus,
+.content-card:focus, .plat-card:focus, .cat-card:focus,
+.watch-btn:focus, .pf-btn:focus, .match-card:focus {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 3px;
+  transform: scale(1.04);
+  transition: transform 0.1s, outline 0.1s;
+  z-index: 10;
+  position: relative;
+}
+.watch-btn:focus {
+  outline: 3px solid #fff !important;
+  background: #3d8fe0;
+}
+
 </style>
 </head>
 <body>
@@ -270,7 +318,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 <!-- LAYOUT -->
 <div class="layout">
   <div class="sidebar">
-    <div class="nav-item active" id="nav-home" onclick="navigate('home')"><i class="ti ti-home"></i> Inicio</div>
+    <div class="nav-item active" id="nav-home" onclick="navigate('home')" tabindex="0" onkeydown="if(event.key==='Enter')navigate('home')"><i class="ti ti-home"></i> Inicio</div>
     <div class="nav-item" id="nav-tv" onclick="navigate('tv')"><i class="ti ti-device-tv"></i> TV en vivo</div>
     <div class="nav-item" id="nav-futbol" onclick="navigate('futbol')"><i class="ti ti-ball-football"></i> Fútbol en vivo</div>
     <div class="nav-item" id="nav-peliculas" onclick="navigate('peliculas')"><i class="ti ti-movie"></i> Películas</div>
@@ -884,6 +932,119 @@ function toggleDrop(id) {
   if (!open) d.classList.add('open');
 }
 document.addEventListener('click', function(){ document.querySelectorAll('.dropdown').forEach(function(x){ x.classList.remove('open'); }); });
+
+// ========== NAVEGACIÓN CON CONTROL REMOTO ==========
+(function() {
+  // Hacer todos los elementos clickeables focuseables
+  function makeFocusable() {
+    var selectors = [
+      '.nav-item', '.tab', '.ch-card', '.movie-card', '.series-card',
+      '.tv-card', '.content-card', '.plat-card', '.cat-card',
+      '.watch-btn', '.pf-btn', '.match-card', '.back-btn',
+      '.ver-mas', '.selector', '.prov-tag'
+    ];
+    selectors.forEach(function(sel) {
+      document.querySelectorAll(sel).forEach(function(el) {
+        if (!el.getAttribute('tabindex')) {
+          el.setAttribute('tabindex', '0');
+        }
+        el.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            el.click();
+          }
+        });
+      });
+    });
+  }
+
+  // Navegación con flechas del control remoto
+  document.addEventListener('keydown', function(e) {
+    var focused = document.activeElement;
+    if (!focused || focused === document.body) {
+      // Si no hay foco, enfocar el primer nav-item
+      var first = document.querySelector('.nav-item');
+      if (first) first.focus();
+      return;
+    }
+
+    // Obtener todos los elementos focuseables visibles
+    var focusables = Array.from(document.querySelectorAll(
+      '.nav-item, .tab, .ch-card, .movie-card, .series-card, ' +
+      '.tv-card, .content-card, .plat-card, .cat-card, ' +
+      '.watch-btn, .pf-btn, .back-btn, .ver-mas, .selector, .sub-btn'
+    )).filter(function(el) {
+      var rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+
+    var idx = focusables.indexOf(focused);
+    if (idx === -1) return;
+
+    var next = null;
+    var focusedRect = focused.getBoundingClientRect();
+
+    if (e.key === 'ArrowRight') {
+      // Siguiente elemento a la derecha o siguiente en lista
+      next = focusables[idx + 1] || focusables[idx];
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft') {
+      next = focusables[idx - 1] || focusables[idx];
+      e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+      // Buscar elemento más cercano debajo
+      var candidates = focusables.filter(function(el, i) {
+        if (i <= idx) return false;
+        var r = el.getBoundingClientRect();
+        return r.top > focusedRect.bottom - 10;
+      });
+      if (candidates.length) {
+        next = candidates.reduce(function(best, el) {
+          var r = el.getBoundingClientRect();
+          var br = best.getBoundingClientRect();
+          var distEl = Math.abs(r.left - focusedRect.left) + (r.top - focusedRect.bottom);
+          var distBest = Math.abs(br.left - focusedRect.left) + (br.top - focusedRect.bottom);
+          return distEl < distBest ? el : best;
+        });
+      }
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      // Buscar elemento más cercano arriba
+      var candidates = focusables.filter(function(el, i) {
+        var r = el.getBoundingClientRect();
+        return r.bottom < focusedRect.top + 10;
+      });
+      if (candidates.length) {
+        next = candidates.reduce(function(best, el) {
+          var r = el.getBoundingClientRect();
+          var br = best.getBoundingClientRect();
+          var distEl = Math.abs(r.left - focusedRect.left) + (focusedRect.top - r.bottom);
+          var distBest = Math.abs(br.left - focusedRect.left) + (focusedRect.top - br.bottom);
+          return distEl < distBest ? el : best;
+        });
+      }
+      e.preventDefault();
+    } else if (e.key === 'Backspace' || e.key === 'Back') {
+      // Botón atrás del control remoto
+      var backBtn = document.querySelector('.panel.active .back-btn');
+      if (backBtn) backBtn.click();
+      e.preventDefault();
+    }
+
+    if (next) {
+      next.focus();
+      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  });
+
+  // Re-aplicar focusable después de cada render
+  var observer = new MutationObserver(function() {
+    makeFocusable();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  makeFocusable();
+})();
+
 </script>
 </body>
 </html>
