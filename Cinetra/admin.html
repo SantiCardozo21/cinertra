@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinetra Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#0a0a0a;--bg2:#0d0d0d;--sidebar:#0f0f0f;--card:#161616;
+  --border:#1e1e1e;--border2:#2a2a2a;--accent:#4DA3FF;--accent-dim:rgba(77,163,255,0.07);
+  --text:#fff;--text2:#ccc;--text3:#888;--text4:#555;--live:#e53935;--ok:#4CAF50;
+  --font:'Outfit',sans-serif;--radius:9px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.login-box{background:var(--sidebar);border:0.5px solid var(--border);border-radius:14px;padding:36px;width:340px;display:flex;flex-direction:column;gap:20px;}
+.login-logo{font-size:24px;font-weight:600;color:var(--text);text-align:center;}
+.login-logo em{color:var(--accent);font-style:normal;}
+.login-badge{text-align:center;font-size:11px;color:var(--text4);}
+.login-group{display:flex;flex-direction:column;gap:6px;}
+.login-label{font-size:11.5px;color:var(--text4);}
+.login-input{background:var(--card);border:0.5px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text2);font-size:13px;font-family:var(--font);outline:none;transition:border-color .12s;}
+.login-input:focus{border-color:var(--accent);}
+.login-btn{background:var(--accent);border:none;border-radius:8px;padding:11px;color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font);}
+.login-btn:hover{background:#3d8fe0;}
+.login-error{font-size:12px;color:var(--live);text-align:center;display:none;}
+.topbar{height:52px;background:var(--sidebar);border-bottom:0.5px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-size:20px;font-weight:600;color:var(--text);}
+.logo em{color:var(--accent);font-style:normal;}
+.admin-badge{font-size:10px;background:var(--accent-dim);color:var(--accent);padding:3px 9px;border-radius:10px;border:0.5px solid rgba(77,163,255,0.2);}
+.topbar-right{margin-left:auto;}
+.logout-btn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text4);cursor:pointer;padding:6px 12px;border-radius:8px;border:0.5px solid var(--border2);background:var(--card);}
+.logout-btn:hover{color:var(--live);border-color:var(--live);}
+.layout{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:190px;background:var(--sidebar);border-right:0.5px solid var(--border);display:flex;flex-direction:column;padding:10px 0;flex-shrink:0;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;color:var(--text3);cursor:pointer;border-left:3px solid transparent;transition:all .12s;}
+.nav-item i{font-size:16px;}
+.nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500;}
+.nav-item:hover:not(.active){background:rgba(255,255,255,.02);color:var(--text2);}
+.nav-sep{font-size:10px;color:#2a2a2a;padding:12px 16px 4px;text-transform:uppercase;letter-spacing:.6px;}
+.main{flex:1;overflow-y:auto;background:var(--bg2);padding:20px;}
+.main::-webkit-scrollbar{width:4px;}
+.main::-webkit-scrollbar-thumb{background:#222;border-radius:2px;}
+.panel{display:none;flex-direction:column;gap:16px;}
+.panel.active{display:flex;}
+.page-title{font-size:16px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:9px;}
+.page-title i{color:var(--accent);}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.stat-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;}
+.stat-num{font-size:26px;font-weight:600;color:var(--text);}
+.stat-label{font-size:11px;color:var(--text4);margin-top:2px;}
+.stat-icon{font-size:20px;margin-bottom:6px;}
+.table-header{display:flex;align-items:center;justify-content:space-between;}
+.searchbar{display:flex;align-items:center;gap:8px;background:var(--card);border:0.5px solid var(--border2);border-radius:8px;padding:8px 12px;}
+.searchbar input{background:none;border:none;outline:none;color:var(--text2);font-size:12px;flex:1;font-family:var(--font);}
+.searchbar input::placeholder{color:#333;}
+.searchbar i{color:#444;font-size:14px;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;color:#444;text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+td{font-size:12px;color:var(--text3);padding:9px 10px;border-bottom:0.5px solid #111;vertical-align:middle;}
+tr:hover td{background:#111;}
+.thumb-mini{width:28px;height:40px;border-radius:4px;overflow:hidden;background:var(--card);flex-shrink:0;}
+.thumb-mini img{width:100%;height:100%;object-fit:cover;}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;}
+.badge.hd{background:rgba(77,163,255,.1);color:var(--accent);}
+.badge.ok{background:rgba(76,175,80,.1);color:var(--ok);}
+.badge.live{background:rgba(229,57,53,.1);color:var(--live);}
+.action-btns{display:flex;gap:5px;}
+.action-btn{width:28px;height:28px;border-radius:6px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .12s;}
+.action-btn:hover{border-color:var(--accent);color:var(--accent);}
+.action-btn.del:hover{border-color:var(--live);color:var(--live);}
+.add-btn{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.add-btn:hover{background:#3d8fe0;}
+.form-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:11px;color:var(--text4);}
+.form-input{background:var(--bg2);border:0.5px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text2);font-size:12.5px;outline:none;font-family:var(--font);transition:border-color .12s;}
+.form-input:focus{border-color:var(--accent);}
+.form-input::placeholder{color:#333;}
+.form-textarea{background:var(--bg2);border:0.5px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text2);font-size:12.5px;outline:none;font-family:var(--font);resize:none;height:72px;transition:border-color .12s;}
+.form-textarea:focus{border-color:var(--accent);}
+.form-select{background:var(--bg2);border:0.5px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text2);font-size:12.5px;outline:none;font-family:var(--font);}
+.url-row{display:flex;gap:8px;align-items:center;}
+.url-row .form-input{flex:1;}
+.preview-box{width:38px;height:54px;border-radius:5px;border:0.5px solid var(--border2);background:var(--bg2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.preview-box img{width:100%;height:100%;object-fit:cover;display:none;}
+.preview-box i{font-size:14px;color:#333;}
+.form-btns{display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{background:var(--card);border:0.5px solid var(--border2);border-radius:7px;padding:8px 16px;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--font);}
+.btn-save{background:var(--accent);border:none;border-radius:7px;padding:8px 18px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;}
+.btn-save:hover{background:#3d8fe0;}
+.divider{height:0.5px;background:var(--border);}
+.ep-section{grid-column:1/-1;background:var(--bg2);border:0.5px solid var(--border2);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ep-section-title{font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:space-between;}
+.ep-row{display:flex;gap:8px;align-items:center;}
+.ep-row .form-input{flex:1;}
+.ep-remove{width:28px;height:28px;border-radius:6px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0;}
+.ep-remove:hover{border-color:var(--live);color:var(--live);}
+.add-ep-btn{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--accent);cursor:pointer;}
+.genre-checks{display:flex;gap:8px;flex-wrap:wrap;}
+.genre-check{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);cursor:pointer;padding:5px 10px;border:0.5px solid var(--border2);border-radius:6px;background:var(--bg2);}
+.genre-check input{accent-color:var(--accent);}
+.prov-checks{display:flex;gap:8px;flex-wrap:wrap;}
+.prov-check{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);cursor:pointer;}
+.prov-check input{accent-color:var(--accent);}
+.dias-badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
+.dias-ok{background:rgba(76,175,80,.12);color:#4CAF50;}
+.dias-warn{background:rgba(255,152,0,.12);color:#FF9800;}
+.dias-danger{background:rgba(229,57,53,.12);color:#e53935;}
+.dias-expired{background:rgba(100,100,100,.12);color:#666;}
+.toast{position:fixed;bottom:24px;right:24px;background:#1e1e1e;border:0.5px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px;z-index:999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok i{color:var(--ok);}
+.toast.err i{color:var(--live);}
+.loading{display:flex;align-items:center;gap:8px;color:var(--text4);font-size:13px;padding:20px 0;}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{color:var(--text4);font-size:13px;padding:20px 0;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:500;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border:0.5px solid var(--border2);border-radius:12px;padding:24px;width:320px;display:flex;flex-direction:column;gap:16px;}
+.modal h3{font-size:15px;font-weight:500;color:var(--text);}
+.modal p{font-size:13px;color:var(--text3);}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+.modal-cancel{background:var(--bg2);border:0.5px solid var(--border2);border-radius:7px;padding:8px 14px;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--font);}
+.modal-confirm{background:var(--live);border:none;border-radius:7px;padding:8px 14px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);}
+.edit-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:600;padding:20px;}
+.edit-modal-bg.open{display:flex;}
+.edit-modal{background:var(--card);border:0.5px solid var(--border2);border-radius:12px;padding:24px;width:100%;max-width:540px;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+.edit-modal h3{font-size:15px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:8px;}
+.edit-modal h3 i{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Cine<em>tra</em></div>
+    <div class="login-badge">Panel de administración</div>
+    <div class="login-group">
+      <label class="login-label">Usuario</label>
+      <input class="login-input" type="text" id="login-user" placeholder="admin">
+    </div>
+    <div class="login-group">
+      <label class="login-label">Contraseña</label>
+      <input class="login-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<div class="topbar" id="app-topbar" style="display:none;">
+  <div class="logo">Cine<em>tra</em></div>
+  <div class="admin-badge">⚙ Admin</div>
+  <div class="topbar-right">
+    <div class="logout-btn" onclick="doLogout()"><i class="ti ti-logout"></i> Salir</div>
+  </div>
+</div>
+
+<div class="layout" id="app-layout" style="display:none;">
+  <div class="sidebar">
+    <div class="nav-sep">General</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="goPanel('dashboard')"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="nav-sep">Contenido</div>
+    <div class="nav-item" id="nav-peliculas" onclick="goPanel('peliculas')"><i class="ti ti-movie"></i> Películas</div>
+    <div class="nav-item" id="nav-series" onclick="goPanel('series')"><i class="ti ti-device-tv-old"></i> Series</div>
+    <div class="nav-item" id="nav-anime" onclick="goPanel('anime')"><i class="ti ti-eye"></i> Anime</div>
+    <div class="nav-item" id="nav-canales" onclick="goPanel('canales')"><i class="ti ti-device-tv"></i> Canales TV</div>
+    <div class="nav-item" id="nav-futbol" onclick="goPanel('futbol')"><i class="ti ti-ball-football"></i> Partidos</div>
+    <div class="nav-sep">Usuarios</div>
+    <div class="nav-item" id="nav-codigos" onclick="goPanel('codigos')"><i class="ti ti-key"></i> Códigos</div>
+    <div class="nav-sep">Acciones</div>
+    <div class="nav-item" id="nav-agregar" onclick="goPanel('agregar')"><i class="ti ti-circle-plus"></i> Agregar nuevo</div>
+  </div>
+
+  <div class="main">
+
+    <div class="panel active" id="panel-dashboard">
+      <div class="page-title"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon">🎬</div><div class="stat-num" id="stat-peli">—</div><div class="stat-label">Películas</div></div>
+        <div class="stat-card"><div class="stat-icon">📺</div><div class="stat-num" id="stat-ser">—</div><div class="stat-label">Series</div></div>
+        <div class="stat-card"><div class="stat-icon">👁</div><div class="stat-num" id="stat-ani">—</div><div class="stat-label">Animes</div></div>
+        <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-num" id="stat-cod">—</div><div class="stat-label">Códigos activos</div></div>
+      </div>
+      <div class="page-title" style="font-size:14px;">Últimos agregados</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Título</th><th>Tipo</th><th>Estado</th></tr></thead>
+        <tbody id="dash-table"><tr><td colspan="3"><div class="loading"><div class="spinner"></div> Cargando...</div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-peliculas">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-movie"></i> Películas</div>
+        <button class="add-btn" onclick="goPanel('agregar');setTipo('pelicula')"><i class="ti ti-plus"></i> Nueva</button>
+      </div>
+      <div class="searchbar"><i class="ti ti-search"></i><input placeholder="Buscar..." oninput="filterTable('tbl-peli',this.value)"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Póster</th><th>Título</th><th>Género</th><th>Año</th><th>Plataforma</th><th></th></tr></thead>
+        <tbody id="tbl-peli"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-series">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-device-tv-old"></i> Series</div>
+        <button class="add-btn" onclick="goPanel('agregar');setTipo('serie')"><i class="ti ti-plus"></i> Nueva</button>
+      </div>
+      <div class="searchbar"><i class="ti ti-search"></i><input placeholder="Buscar..." oninput="filterTable('tbl-serie',this.value)"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Póster</th><th>Título</th><th>Género</th><th>Temporadas</th><th></th></tr></thead>
+        <tbody id="tbl-serie"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-anime">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-eye"></i> Anime</div>
+        <button class="add-btn" onclick="goPanel('agregar');setTipo('anime')"><i class="ti ti-plus"></i> Nuevo</button>
+      </div>
+      <div class="searchbar"><i class="ti ti-search"></i><input placeholder="Buscar..." oninput="filterTable('tbl-anime',this.value)"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Póster</th><th>Título</th><th>Género</th><th>Temporadas</th><th></th></tr></thead>
+        <tbody id="tbl-anime"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-canales">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-device-tv"></i> Canales TV</div>
+        <button class="add-btn" onclick="goPanel('agregar');setTipo('canal')"><i class="ti ti-plus"></i> Nuevo</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Canal</th><th>Categoría</th><th>Siglas</th><th>Link stream</th><th></th></tr></thead>
+        <tbody id="tbl-canal"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-futbol">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-ball-football"></i> Partidos</div>
+        <button class="add-btn" onclick="goPanel('agregar');setTipo('partido')"><i class="ti ti-plus"></i> Nuevo</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Partido</th><th>Fecha</th><th>Estado</th><th>Proveedores</th><th></th></tr></thead>
+        <tbody id="tbl-futbol"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-codigos">
+      <div class="table-header">
+        <div class="page-title"><i class="ti ti-key"></i> Códigos de acceso</div>
+        <button class="add-btn" onclick="mostrarFormCodigo()"><i class="ti ti-plus"></i> Generar código</button>
+      </div>
+      <div class="form-card" id="form-codigo" style="display:none;">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Nombre del usuario *</label><input class="form-input" id="nc-nombre" placeholder="Ej: Juan García"></div>
+          <div class="form-group"><label class="form-label">Código (opcional, se genera solo)</label><input class="form-input" id="nc-codigo" placeholder="Ej: JUAN-2847" style="text-transform:uppercase;" ></div>
+          <div class="form-group"><label class="form-label">Días de acceso</label>
+            <select class="form-select" id="nc-dias">
+              <option value="30">30 días (1 mes)</option>
+              <option value="60">60 días (2 meses)</option>
+              <option value="90">90 días (3 meses)</option>
+              <option value="365">365 días (1 año)</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="nc-notas" placeholder="Ej: Pago $5 por transferencia"></div>
+          <div class="form-btns full">
+            <button class="btn-cancel" onclick="document.getElementById('form-codigo').style.display='none'">Cancelar</button>
+            <button class="btn-save" onclick="crearCodigo()"><i class="ti ti-check"></i> Crear código</button>
+          </div>
+        </div>
+      </div>
+      <div class="searchbar"><i class="ti ti-search"></i><input placeholder="Buscar código o nombre..." oninput="filterTable('tbl-codigos',this.value)"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Código</th><th>Nombre</th><th>Vence</th><th>Días restantes</th><th>Último acceso</th><th>Notas</th><th></th></tr></thead>
+        <tbody id="tbl-codigos"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" id="panel-agregar">
+      <div class="page-title"><i class="ti ti-circle-plus"></i> Agregar contenido</div>
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label">Tipo de contenido</label>
+          <select class="form-select" id="tipo-select" onchange="setTipo(this.value)">
+            <option value="pelicula">🎬 Película</option>
+            <option value="serie">📺 Serie</option>
+            <option value="anime">👁 Anime</option>
+            <option value="canal">📡 Canal de TV</option>
+            <option value="partido">⚽ Partido de fútbol</option>
+          </select>
+        </div>
+        <div class="divider" style="margin:14px 0;"></div>
+
+        <div class="form-grid" id="form-pelicula">
+          <div class="form-group"><label class="form-label">Título *</label><input class="form-input" id="fp-titulo" placeholder="Ej: Dune: Parte 2"></div>
+          <div class="form-group"><label class="form-label">Año</label><input class="form-input" id="fp-anio" placeholder="2024"></div>
+          <div class="form-group"><label class="form-label">Duración</label><input class="form-input" id="fp-duracion" placeholder="Ej: 120 min"></div>
+          <div class="form-group"><label class="form-label">Plataforma</label>
+            <select class="form-select" id="fp-plataforma"><option>Netflix</option><option>Disney+</option><option>Max</option><option>Prime Video</option><option>Paramount+</option><option>Apple TV+</option><option>Otro</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">Géneros (podés elegir varios)</label>
+            <div class="genre-checks">
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Acción"><span>Acción</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Drama"><span>Drama</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Comedia"><span>Comedia</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Terror"><span>Terror</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Sci-Fi"><span>Sci-Fi</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Animación"><span>Animación</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Romance"><span>Romance</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Suspenso"><span>Suspenso</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Crimen"><span>Crimen</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Documental"><span>Documental</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Familia"><span>Familia</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Aventura"><span>Aventura</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Fantasía"><span>Fantasía</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Misterio"><span>Misterio</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Ciencia Ficción"><span>Ciencia Ficción</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Bélica"><span>Bélica</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Música"><span>Música</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Historia"><span>Historia</span></label>
+              <label class="genre-check"><input type="checkbox" class="fp-genre" value="Western"><span>Western</span></label>
+            </div>
+          </div>
+          <div class="form-group full"><label class="form-label">Sinopsis</label><textarea class="form-textarea" id="fp-sinopsis" placeholder="Descripción de la película..."></textarea></div>
+          <div class="form-group full"><label class="form-label">URL del póster (TMDB recomendado)</label>
+            <div class="url-row"><input class="form-input" id="fp-poster" placeholder="https://image.tmdb.org/t/p/w500/..." oninput="previewUrl(this,'prev-fp')">
+            <div class="preview-box" id="prev-fp"><i class="ti ti-photo"></i></div></div>
+          </div>
+          <div class="form-group full"><label class="form-label">Link de reproducción *</label><input class="form-input" id="fp-link" placeholder="https://pelisplushd.bz/pelicula/..."></div>
+          <div class="form-btns full"><button class="btn-cancel" onclick="resetForm('pelicula')">Limpiar</button><button class="btn-save" onclick="savePelicula()"><i class="ti ti-check"></i> Guardar película</button></div>
+        </div>
+
+        <div class="form-grid" id="form-serie" style="display:none;">
+          <div class="form-group"><label class="form-label">Título *</label><input class="form-input" id="fs-titulo" placeholder="Ej: The Last of Us"></div>
+          <div class="form-group"><label class="form-label">Año</label><input class="form-input" id="fs-anio" placeholder="2023"></div>
+          <div class="form-group"><label class="form-label">Plataforma</label>
+            <select class="form-select" id="fs-plataforma"><option>Netflix</option><option>Disney+</option><option>Max</option><option>Prime Video</option><option>Paramount+</option><option>Apple TV+</option><option>Otro</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">Géneros</label>
+            <div class="genre-checks">
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Drama"><span>Drama</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Acción"><span>Acción</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Comedia"><span>Comedia</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Sci-Fi"><span>Sci-Fi</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Suspenso"><span>Suspenso</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Terror"><span>Terror</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Romance"><span>Romance</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Fantasía"><span>Fantasía</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Crimen"><span>Crimen</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Shonen"><span>Shonen</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Seinen"><span>Seinen</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Isekai"><span>Isekai</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Aventura"><span>Aventura</span></label>
+              <label class="genre-check"><input type="checkbox" class="fs-genre" value="Misterio"><span>Misterio</span></label>
+            </div>
+          </div>
+          <div class="form-group full"><label class="form-label">Sinopsis</label><textarea class="form-textarea" id="fs-sinopsis" placeholder="Descripción general de la serie..."></textarea></div>
+          <div class="form-group full"><label class="form-label">URL del póster</label>
+            <div class="url-row"><input class="form-input" id="fs-poster" placeholder="https://image.tmdb.org/t/p/w500/..." oninput="previewUrl(this,'prev-fs')">
+            <div class="preview-box" id="prev-fs"><i class="ti ti-photo"></i></div></div>
+          </div>
+          <div class="ep-section full">
+            <div class="ep-section-title"><span>Episodios</span><div class="add-ep-btn" onclick="addEpRow()"><i class="ti ti-plus"></i> Agregar episodio</div></div>
+            <div id="ep-rows"></div>
+          </div>
+          <div class="form-btns full"><button class="btn-cancel" onclick="resetForm('serie')">Limpiar</button><button class="btn-save" onclick="saveSerie()"><i class="ti ti-check"></i> Guardar serie</button></div>
+        </div>
+
+        <div class="form-grid" id="form-canal" style="display:none;">
+          <div class="form-group"><label class="form-label">Nombre *</label><input class="form-input" id="fc-nombre" placeholder="Ej: C5N"></div>
+          <div class="form-group"><label class="form-label">Siglas</label><input class="form-input" id="fc-siglas" placeholder="C5N" ></div>
+          <div class="form-group"><label class="form-label">Categoría</label>
+            <select class="form-select" id="fc-categoria"><option value="noticias">Noticias</option><option value="entretenimiento">Entretenimiento</option><option value="deportes">Deportes</option><option value="internacionales">Internacionales</option><option value="infantil">Infantil</option><option value="peliculas">Películas</option><option value="mas">Más</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Color de fondo</label><input class="form-input" id="fc-color" type="color" value="#e53935"></div>
+          <div class="form-group full"><label class="form-label">URL del logo</label>
+            <div class="url-row"><input class="form-input" id="fc-logo" placeholder="https://..." oninput="previewUrl(this,'prev-fc')">
+            <div class="preview-box" id="prev-fc"><i class="ti ti-photo"></i></div></div>
+          </div>
+          <div class="form-group full"><label class="form-label">Link del stream *</label><input class="form-input" id="fc-link" placeholder="https://pelisjuanita.com/tv/..."></div>
+          <div class="form-btns full"><button class="btn-cancel" onclick="resetForm('canal')">Limpiar</button><button class="btn-save" onclick="saveCanal()"><i class="ti ti-check"></i> Guardar canal</button></div>
+        </div>
+
+        <div class="form-grid" id="form-partido" style="display:none;">
+          <div class="form-group"><label class="form-label">Equipo local *</label><input class="form-input" id="fpa-local" placeholder="Ej: Argentina"></div>
+          <div class="form-group"><label class="form-label">Sigla local</label><input class="form-input" id="fpa-sigla-l" placeholder="ARG" ></div>
+          <div class="form-group"><label class="form-label">Equipo visitante *</label><input class="form-input" id="fpa-visit" placeholder="Ej: Brasil"></div>
+          <div class="form-group"><label class="form-label">Sigla visitante</label><input class="form-input" id="fpa-sigla-v" placeholder="BRA" ></div>
+          <div class="form-group"><label class="form-label">Color local</label><input class="form-input" id="fpa-color-l" type="color" value="#1565c0"></div>
+          <div class="form-group"><label class="form-label">Color visitante</label><input class="form-input" id="fpa-color-v" type="color" value="#c62828"></div>
+          <div class="form-group"><label class="form-label">Fecha y hora</label><input class="form-input" id="fpa-fecha" type="datetime-local"></div>
+          <div class="form-group"><label class="form-label">¿En vivo ahora?</label>
+            <select class="form-select" id="fpa-vivo"><option value="false">No</option><option value="true">Sí</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">Proveedores disponibles</label>
+            <div class="prov-checks">
+              <label class="prov-check"><input type="checkbox" id="ppa-disney"> Disney+</label>
+              <label class="prov-check"><input type="checkbox" id="ppa-espn"> ESPN Premium</label>
+              <label class="prov-check"><input type="checkbox" id="ppa-tnt"> TNT Sports</label>
+              <label class="prov-check"><input type="checkbox" id="ppa-fox"> Fox Sports</label>
+              <label class="prov-check"><input type="checkbox" id="ppa-tyc"> TyC Sports</label>
+              <label class="prov-check"><input type="checkbox" id="ppa-dsports"> DSports</label>
+            </div>
+          </div>
+          <div class="form-group full"><label class="form-label">Link Disney+</label><input class="form-input" id="fpa-link-disney" placeholder="https://..."></div>
+          <div class="form-group full"><label class="form-label">Link ESPN Premium</label><input class="form-input" id="fpa-link-espn" placeholder="https://..."></div>
+          <div class="form-group full"><label class="form-label">Link TNT Sports</label><input class="form-input" id="fpa-link-tnt" placeholder="https://..."></div>
+          <div class="form-group full"><label class="form-label">Link Fox Sports</label><input class="form-input" id="fpa-link-fox" placeholder="https://..."></div>
+          <div class="form-group full"><label class="form-label">Link TyC Sports</label><input class="form-input" id="fpa-link-tyc" placeholder="https://..."></div>
+          <div class="form-group full"><label class="form-label">Link DSports</label><input class="form-input" id="fpa-link-dsports" placeholder="https://..."></div>
+          <div class="form-btns full"><button class="btn-cancel" onclick="resetForm('partido')">Limpiar</button><button class="btn-save" onclick="savePartido()"><i class="ti ti-check"></i> Guardar partido</button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toast-msg"></span></div>
+
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3>¿Eliminar elemento?</h3>
+    <p>Esta acción no se puede deshacer.</p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="modal-confirm" id="modal-confirm-btn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-modal-bg" id="edit-modal-bg">
+  <div class="edit-modal">
+    <h3><i class="ti ti-pencil"></i> Editar</h3>
+    <div class="form-grid" id="edit-form-fields"></div>
+    <div class="form-btns">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-save" id="edit-save-btn"><i class="ti ti-check"></i> Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
+const ADMIN_USER = 'CARDO';
+const ADMIN_PASS = 'Santiago211002$';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    sessionStorage.setItem('cinetra_admin','1');
+    showApp();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+function doLogout() { sessionStorage.removeItem('cinetra_admin'); location.reload(); }
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-topbar').style.display = 'flex';
+  document.getElementById('app-layout').style.display = 'flex';
+  loadAll();
+}
+if (sessionStorage.getItem('cinetra_admin') === '1') showApp();
+
+function goPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const nav = document.getElementById('nav-'+name);
+  if (nav) nav.classList.add('active');
+}
+
+let data = {peliculas:[],series:[],anime:[],canales:[],partidos:[]};
+
+async function loadAll() {
+  const [pr,sr,ar,cr,fr] = await Promise.all([
+    db.from('peliculas').select('*').order('created_at',{ascending:false}),
+    db.from('series').select('*').order('created_at',{ascending:false}),
+    db.from('anime').select('*').order('created_at',{ascending:false}),
+    db.from('canales').select('*').order('nombre'),
+    db.from('partidos').select('*').order('fecha')
+  ]);
+  data.peliculas=pr.data||[]; data.series=sr.data||[];
+  data.anime=ar.data||[]; data.canales=cr.data||[]; data.partidos=fr.data||[];
+  renderDash(); renderPeliculas(); renderSeries(); renderAnime(); renderCanales(); renderPartidos();
+  loadCodigos();
+}
+
+function renderDash() {
+  document.getElementById('stat-peli').textContent = data.peliculas.length;
+  document.getElementById('stat-ser').textContent = data.series.length;
+  document.getElementById('stat-ani').textContent = data.anime.length;
+  const all = [...data.peliculas.slice(0,3).map(i=>({...i,tipo:'Película'})),...data.series.slice(0,2).map(i=>({...i,tipo:'Serie'}))];
+  document.getElementById('dash-table').innerHTML = all.map(i =>
+    '<tr><td>'+i.titulo+'</td><td>'+i.tipo+'</td><td><span class="badge ok">Activo</span></td></tr>'
+  ).join('') || '<tr><td colspan="3" class="empty">Sin contenido</td></tr>';
+}
+
+function renderPeliculas(list) {
+  list = list || data.peliculas;
+  document.getElementById('tbl-peli').innerHTML = list.map(p =>
+    '<tr><td><div class="thumb-mini">'+(p.poster_url?'<img src="'+p.poster_url+'">' :'')+'</div></td>'+
+    '<td style="color:var(--text2);">'+p.titulo+'</td><td>'+( p.genero||'—')+'</td><td>'+(p.anio||'—')+'</td><td>'+(p.plataforma||'—')+'</td>'+
+    '<td><div class="action-btns">'+
+    '<div class="action-btn" onclick=\'editItem("peliculas",'+JSON.stringify(p)+')\' title="Editar"><i class="ti ti-pencil"></i></div>'+
+    '<div class="action-btn del" onclick="confirmDelete(\'peliculas\',\''+p.id+'\')"><i class="ti ti-trash"></i></div>'+
+    '</div></td></tr>'
+  ).join('') || '<tr><td colspan="6" class="empty">Sin películas</td></tr>';
+}
+
+function renderSeries(list) {
+  list = list || data.series;
+  document.getElementById('tbl-serie').innerHTML = list.map(s =>
+    '<tr><td><div class="thumb-mini">'+(s.poster_url?'<img src="'+s.poster_url+'">' :'')+'</div></td>'+
+    '<td style="color:var(--text2);">'+s.titulo+'</td><td>'+(s.genero||'—')+'</td><td>'+(s.temporadas||1)+' temp.</td>'+
+    '<td><div class="action-btns">'+
+    '<div class="action-btn" onclick=\'editItem("series",'+JSON.stringify(s)+')\' title="Editar"><i class="ti ti-pencil"></i></div>'+
+    '<div class="action-btn del" onclick="confirmDelete(\'series\',\''+s.id+'\')"><i class="ti ti-trash"></i></div>'+
+    '</div></td></tr>'
+  ).join('') || '<tr><td colspan="5" class="empty">Sin series</td></tr>';
+}
+
+function renderAnime(list) {
+  list = list || data.anime;
+  document.getElementById('tbl-anime').innerHTML = list.map(a =>
+    '<tr><td><div class="thumb-mini">'+(a.poster_url?'<img src="'+a.poster_url+'">' :'')+'</div></td>'+
+    '<td style="color:var(--text2);">'+a.titulo+'</td><td>'+(a.genero||'—')+'</td><td>'+(a.temporadas||1)+' temp.</td>'+
+    '<td><div class="action-btns">'+
+    '<div class="action-btn" onclick=\'editItem("anime",'+JSON.stringify(a)+')\' title="Editar"><i class="ti ti-pencil"></i></div>'+
+    '<div class="action-btn del" onclick="confirmDelete(\'anime\',\''+a.id+'\')"><i class="ti ti-trash"></i></div>'+
+    '</div></td></tr>'
+  ).join('') || '<tr><td colspan="5" class="empty">Sin anime</td></tr>';
+}
+
+function renderCanales(list) {
+  list = list || data.canales;
+  document.getElementById('tbl-canal').innerHTML = list.map(c =>
+    '<tr><td style="color:var(--text2);">'+c.nombre+'</td><td>'+(c.categoria||'—')+'</td>'+
+    '<td><span style="background:'+(c.color||'#555')+';color:#fff;padding:2px 7px;border-radius:4px;font-size:11px;">'+(c.siglas||'—')+'</span></td>'+
+    '<td style="font-size:11px;color:var(--text4);">'+(c.link_stream||'—').substring(0,40)+'</td>'+
+    '<td><div class="action-btns">'+
+    '<div class="action-btn" onclick=\'editItem("canales",'+JSON.stringify(c)+')\' title="Editar"><i class="ti ti-pencil"></i></div>'+
+    '<div class="action-btn del" onclick="confirmDelete(\'canales\',\''+c.id+'\')"><i class="ti ti-trash"></i></div>'+
+    '</div></td></tr>'
+  ).join('') || '<tr><td colspan="5" class="empty">Sin canales</td></tr>';
+}
+
+function renderPartidos(list) {
+  list = list || data.partidos;
+  document.getElementById('tbl-futbol').innerHTML = list.map(p =>
+    '<tr><td style="color:var(--text2);">'+p.equipo_local+' vs '+p.equipo_visit+'</td>'+
+    '<td style="font-size:11px;">'+(p.fecha?new Date(p.fecha).toLocaleString('es-AR'):'—')+'</td>'+
+    '<td>'+(p.en_vivo?'<span class="badge live">En vivo</span>':'<span class="badge">Próximo</span>')+'</td>'+
+    '<td style="font-size:11px;">'+(p.proveedores||[]).join(', ')+'</td>'+
+    '<td><div class="action-btns">'+
+    '<div class="action-btn" onclick=\'editItem("partidos",'+JSON.stringify(p)+')\' title="Editar"><i class="ti ti-pencil"></i></div>'+
+    '<div class="action-btn del" onclick="confirmDelete(\'partidos\',\''+p.id+'\')"><i class="ti ti-trash"></i></div>'+
+    '</div></td></tr>'
+  ).join('') || '<tr><td colspan="5" class="empty">Sin partidos</td></tr>';
+}
+
+function filterTable(id, val) {
+  document.querySelectorAll('#'+id+' tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(val.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// GUARDAR
+async function savePelicula() {
+  const titulo = document.getElementById('fp-titulo').value.trim();
+  const link = document.getElementById('fp-link').value.trim();
+  if (!titulo || !link) return toast('Título y link son obligatorios','err');
+  const generos = [...document.querySelectorAll('.fp-genre:checked')].map(c=>c.value).join(', ');
+  const {error} = await db.from('peliculas').insert({
+    titulo, anio: document.getElementById('fp-anio').value,
+    genero: generos||'Sin género', duracion: document.getElementById('fp-duracion').value,
+    plataforma: document.getElementById('fp-plataforma').value,
+    sinopsis: document.getElementById('fp-sinopsis').value,
+    poster_url: document.getElementById('fp-poster').value, link_reproduccion: link
+  });
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Película guardada ✓','ok'); resetForm('pelicula'); await loadAll();
+}
+
+async function saveSerie() {
+  const titulo = document.getElementById('fs-titulo').value.trim();
+  if (!titulo) return toast('El título es obligatorio','err');
+  const generos = [...document.querySelectorAll('.fs-genre:checked')].map(c=>c.value).join(', ');
+  const epRows = document.querySelectorAll('#ep-rows .ep-row');
+  const episodios = {};
+  epRows.forEach(row => {
+    const temp = parseInt(row.querySelector('.ep-temp').value)||1;
+    const ep = parseInt(row.querySelector('.ep-num').value)||1;
+    const link = row.querySelector('.ep-link').value.trim();
+    const tit = row.querySelector('.ep-titulo').value.trim();
+    if (!episodios[temp]) episodios[temp] = [];
+    episodios[temp].push({ep, link, titulo: tit});
+  });
+  const temps = Object.keys(episodios).length||1;
+  const table = document.getElementById('tipo-select').value === 'anime' ? 'anime' : 'series';
+  const {error} = await db.from(table).insert({
+    titulo, anio: document.getElementById('fs-anio').value,
+    genero: generos||'Sin género', plataforma: document.getElementById('fs-plataforma').value,
+    sinopsis: document.getElementById('fs-sinopsis').value,
+    poster_url: document.getElementById('fs-poster').value,
+    temporadas: temps, episodios, ultimo_episodio: epRows.length
+  });
+  if (error) return toast('Error: '+error.message,'err');
+  toast((table==='anime'?'Anime':'Serie')+' guardada ✓','ok'); resetForm('serie'); await loadAll();
+}
+
+async function saveCanal() {
+  const nombre = document.getElementById('fc-nombre').value.trim();
+  const link = document.getElementById('fc-link').value.trim();
+  if (!nombre || !link) return toast('Nombre y link son obligatorios','err');
+  const {error} = await db.from('canales').insert({
+    nombre, siglas: document.getElementById('fc-siglas').value.toUpperCase(),
+    categoria: document.getElementById('fc-categoria').value,
+    color: document.getElementById('fc-color').value,
+    logo_url: document.getElementById('fc-logo').value, link_stream: link
+  });
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Canal guardado ✓','ok'); resetForm('canal'); await loadAll();
+}
+
+async function savePartido() {
+  const local = document.getElementById('fpa-local').value.trim();
+  const visit = document.getElementById('fpa-visit').value.trim();
+  if (!local || !visit) return toast('Ambos equipos son obligatorios','err');
+  const provs = ['disney','espn','tnt','fox','tyc','dsports'].filter(p=>document.getElementById('ppa-'+p).checked);
+  const links = {};
+  provs.forEach(p => { links['link_'+p] = document.getElementById('fpa-link-'+p).value.trim(); });
+  const {error} = await db.from('partidos').insert({
+    equipo_local: local, equipo_visit: visit,
+    sigla_local: document.getElementById('fpa-sigla-l').value.toUpperCase(),
+    sigla_visit: document.getElementById('fpa-sigla-v').value.toUpperCase(),
+    color_local: document.getElementById('fpa-color-l').value,
+    color_visit: document.getElementById('fpa-color-v').value,
+    fecha: document.getElementById('fpa-fecha').value,
+    en_vivo: document.getElementById('fpa-vivo').value === 'true',
+    proveedores: provs, ...links
+  });
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Partido guardado ✓','ok'); resetForm('partido'); await loadAll();
+}
+
+// EDITAR
+let _editTable = '', _editId = '';
+function setF(id, val) { const el = document.getElementById(id); if(el) el.value = val||''; }
+
+function editItem(table, item) {
+  _editTable = table; _editId = item.id;
+  const f = document.getElementById('edit-form-fields');
+  const plats = ['Netflix','Disney+','Max','Prime Video','Paramount+','Apple TV+','Otro'];
+  const cats = ['noticias','entretenimiento','deportes','internacionales','infantil','peliculas','mas'];
+
+  function sel(id, opts, selected) {
+    return '<select class="form-select" id="'+id+'">' + opts.map(o=>'<option value="'+o+'"'+(o===selected?' selected':'')+'>'+o+'</option>').join('') + '</select>';
+  }
+  function inp(id, label, val, type) {
+    return '<div class="form-group"><label class="form-label">'+label+'</label><input class="form-input" id="'+id+'" value="'+(val||'')+'"'+(type?' type="'+type+'"':'')+' ></div>';
+  }
+  function inpFull(id, label, val) {
+    return '<div class="form-group full"><label class="form-label">'+label+'</label><input class="form-input" id="'+id+'" value="'+(val||'')+'"></div>';
+  }
+  function ta(id, label, val) {
+    return '<div class="form-group full"><label class="form-label">'+label+'</label><textarea class="form-textarea" id="'+id+'">'+(val||'')+'</textarea></div>';
+  }
+
+  if (table === 'peliculas') {
+    f.innerHTML =
+      inpFull('e-titulo','Título',item.titulo) +
+      inp('e-anio','Año',item.anio) +
+      inp('e-duracion','Duración',item.duracion) +
+      '<div class="form-group"><label class="form-label">Plataforma</label>'+sel('e-plataforma',plats,item.plataforma)+'</div>' +
+      inpFull('e-genero','Géneros (separados por coma)',item.genero) +
+      ta('e-sinopsis','Sinopsis',item.sinopsis) +
+      inpFull('e-poster','URL del póster',item.poster_url) +
+      inpFull('e-link','Link de reproducción',item.link_reproduccion);
+    document.getElementById('edit-save-btn').onclick = saveEditPelicula;
+  } else if (table === 'series' || table === 'anime') {
+    f.innerHTML =
+      inpFull('e-titulo','Título',item.titulo) +
+      inp('e-anio','Año',item.anio) +
+      '<div class="form-group"><label class="form-label">Plataforma</label>'+sel('e-plataforma',plats,item.plataforma)+'</div>' +
+      inpFull('e-genero','Géneros (separados por coma)',item.genero) +
+      ta('e-sinopsis','Sinopsis',item.sinopsis) +
+      inpFull('e-poster','URL del póster',item.poster_url);
+    document.getElementById('edit-save-btn').onclick = saveEditSerie;
+  } else if (table === 'canales') {
+    f.innerHTML =
+      inp('e-nombre','Nombre',item.nombre) +
+      inp('e-siglas','Siglas',item.siglas) +
+      '<div class="form-group"><label class="form-label">Categoría</label>'+sel('e-categoria',cats,item.categoria)+'</div>' +
+      inp('e-color','Color',item.color||'#555555','color') +
+      inpFull('e-logo','URL del logo',item.logo_url) +
+      inpFull('e-link-stream','Link del stream',item.link_stream);
+    document.getElementById('edit-save-btn').onclick = saveEditCanal;
+  } else if (table === 'partidos') {
+    f.innerHTML =
+      inp('e-local','Equipo local',item.equipo_local) +
+      inp('e-visit','Equipo visitante',item.equipo_visit) +
+      inp('e-fecha','Fecha y hora',item.fecha?item.fecha.substring(0,16):'','datetime-local') +
+      '<div class="form-group"><label class="form-label">En vivo</label><select class="form-select" id="e-vivo"><option value="false"'+(!item.en_vivo?' selected':'')+'>No</option><option value="true"'+(item.en_vivo?' selected':'')+'>Sí</option></select></div>' +
+      inp('e-goles-l','Goles local',item.goles_local||0,'number') +
+      inp('e-goles-v','Goles visitante',item.goles_visit||0,'number') +
+      inp('e-minuto','Minuto',item.minuto||0,'number');
+    document.getElementById('edit-save-btn').onclick = saveEditPartido;
+  }
+  document.getElementById('edit-modal-bg').classList.add('open');
+}
+
+function closeEditModal() { document.getElementById('edit-modal-bg').classList.remove('open'); }
+
+async function saveEditPelicula() {
+  const {error} = await db.from('peliculas').update({
+    titulo: document.getElementById('e-titulo').value, anio: document.getElementById('e-anio').value,
+    duracion: document.getElementById('e-duracion').value, plataforma: document.getElementById('e-plataforma').value,
+    genero: document.getElementById('e-genero').value, sinopsis: document.getElementById('e-sinopsis').value,
+    poster_url: document.getElementById('e-poster').value, link_reproduccion: document.getElementById('e-link').value
+  }).eq('id',_editId);
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Película actualizada ✓','ok'); closeEditModal(); await loadAll();
+}
+async function saveEditSerie() {
+  const {error} = await db.from(_editTable).update({
+    titulo: document.getElementById('e-titulo').value, anio: document.getElementById('e-anio').value,
+    plataforma: document.getElementById('e-plataforma').value, genero: document.getElementById('e-genero').value,
+    sinopsis: document.getElementById('e-sinopsis').value, poster_url: document.getElementById('e-poster').value
+  }).eq('id',_editId);
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Actualizado ✓','ok'); closeEditModal(); await loadAll();
+}
+async function saveEditCanal() {
+  const {error} = await db.from('canales').update({
+    nombre: document.getElementById('e-nombre').value,
+    siglas: document.getElementById('e-siglas').value.toUpperCase(),
+    categoria: document.getElementById('e-categoria').value,
+    color: document.getElementById('e-color').value,
+    logo_url: document.getElementById('e-logo').value,
+    link_stream: document.getElementById('e-link-stream').value
+  }).eq('id',_editId);
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Canal actualizado ✓','ok'); closeEditModal(); await loadAll();
+}
+async function saveEditPartido() {
+  const {error} = await db.from('partidos').update({
+    equipo_local: document.getElementById('e-local').value,
+    equipo_visit: document.getElementById('e-visit').value,
+    fecha: document.getElementById('e-fecha').value,
+    en_vivo: document.getElementById('e-vivo').value === 'true',
+    goles_local: parseInt(document.getElementById('e-goles-l').value)||0,
+    goles_visit: parseInt(document.getElementById('e-goles-v').value)||0,
+    minuto: parseInt(document.getElementById('e-minuto').value)||0
+  }).eq('id',_editId);
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Partido actualizado ✓','ok'); closeEditModal(); await loadAll();
+}
+
+// ELIMINAR
+let _deleteTable = '', _deleteId = '';
+function confirmDelete(table, id) {
+  _deleteTable = table; _deleteId = id;
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('modal-confirm-btn').onclick = async () => {
+    await db.from(table).delete().eq('id',id);
+    closeModal(); toast('Eliminado ✓','ok'); await loadAll();
+  };
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+// CÓDIGOS
+function mostrarFormCodigo() {
+  const form = document.getElementById('form-codigo');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+async function crearCodigo() {
+  const nombre = document.getElementById('nc-nombre').value.trim();
+  if (!nombre) return toast('El nombre es obligatorio','err');
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let codigo = document.getElementById('nc-codigo').value.trim().toUpperCase();
+  if (!codigo) {
+    for(let i=0;i<4;i++) codigo += chars[Math.floor(Math.random()*chars.length)];
+    codigo += '-';
+    for(let i=0;i<4;i++) codigo += chars[Math.floor(Math.random()*chars.length)];
+  }
+  const dias = parseInt(document.getElementById('nc-dias').value);
+  const vence = new Date(); vence.setDate(vence.getDate()+dias);
+  const {error} = await db.from('codigos').insert({
+    codigo, nombre, notas: document.getElementById('nc-notas').value,
+    fecha_vencimiento: vence.toISOString(), activo: true
+  });
+  if (error) return toast('Error: '+error.message,'err');
+  toast('Código '+codigo+' creado ✓','ok');
+  document.getElementById('form-codigo').style.display = 'none';
+  document.getElementById('nc-nombre').value = '';
+  document.getElementById('nc-codigo').value = '';
+  document.getElementById('nc-notas').value = '';
+  await loadCodigos();
+}
+
+async function loadCodigos() {
+  const {data: codigos} = await db.from('codigos').select('*').order('created_at',{ascending:false});
+  document.getElementById('stat-cod').textContent = (codigos||[]).filter(c=>{ const d=Math.ceil((new Date(c.fecha_vencimiento)-new Date())/(1000*60*60*24)); return d>0; }).length;
+  const tbody = document.getElementById('tbl-codigos');
+  if (!codigos || !codigos.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Sin códigos creados</td></tr>'; return; }
+  const hoy = new Date();
+  tbody.innerHTML = codigos.map(c => {
+    const vence = new Date(c.fecha_vencimiento);
+    const dias = Math.ceil((vence-hoy)/(1000*60*60*24));
+    const cls = dias>7?'dias-ok':dias>3?'dias-warn':dias>0?'dias-danger':'dias-expired';
+    const txt = dias>0?dias+' días':'Vencido';
+    const ua = c.ultimo_acceso ? new Date(c.ultimo_acceso).toLocaleDateString('es-AR') : 'Nunca';
+    return '<tr>'+
+      '<td style="font-family:monospace;font-weight:600;color:var(--accent);letter-spacing:1px;">'+c.codigo+'</td>'+
+      '<td style="color:var(--text2);">'+c.nombre+'</td>'+
+      '<td style="font-size:11px;">'+vence.toLocaleDateString('es-AR')+'</td>'+
+      '<td><span class="dias-badge '+cls+'">'+txt+'</span></td>'+
+      '<td style="font-size:11px;color:var(--text4);">'+ua+'</td>'+
+      '<td style="font-size:11px;color:var(--text4);">'+(c.notas||'—')+'</td>'+
+      '<td><div class="action-btns">'+
+      '<div class="action-btn" onclick="renovarCodigo(\''+c.id+'\',\''+c.codigo+'\')" title="Renovar 30 días"><i class="ti ti-refresh"></i></div>'+
+      '<div class="action-btn del" onclick="confirmDelete(\'codigos\',\''+c.id+'\')"><i class="ti ti-trash"></i></div>'+
+      '</div></td>'+
+      '</tr>';
+  }).join('');
+}
+
+async function renovarCodigo(id, codigo) {
+  const nueva = new Date(); nueva.setDate(nueva.getDate()+30);
+  const {error} = await db.from('codigos').update({fecha_vencimiento:nueva.toISOString()}).eq('id',id);
+  if (error) return toast('Error al renovar','err');
+  toast('Código '+codigo+' renovado 30 días ✓','ok'); await loadCodigos();
+}
+
+// HELPERS
+function setTipo(tipo) {
+  document.getElementById('tipo-select').value = tipo==='anime'?'anime':tipo;
+  const map = {pelicula:'pelicula',serie:'serie',anime:'serie',canal:'canal',partido:'partido'};
+  ['pelicula','serie','canal','partido'].forEach(t => {
+    document.getElementById('form-'+t).style.display = (t===(map[tipo]||tipo))?'grid':'none';
+  });
+}
+function resetForm(tipo) {
+  document.querySelectorAll('#form-'+tipo+' input, #form-'+tipo+' textarea').forEach(el => { if(el.type!=='color') el.value=''; });
+  document.querySelectorAll('#form-'+tipo+' input[type="checkbox"]').forEach(el => el.checked=false);
+  if (tipo==='serie') document.getElementById('ep-rows').innerHTML='';
+}
+function previewUrl(input, previewId) {
+  const url = input.value.trim();
+  const box = document.getElementById(previewId);
+  let img = box.querySelector('img');
+  let ico = box.querySelector('i');
+  if (!img) { img=document.createElement('img'); img.style.cssText='width:100%;height:100%;object-fit:cover;'; box.appendChild(img); }
+  if (url) { img.src=url; img.style.display='block'; if(ico) ico.style.display='none'; }
+  else { img.style.display='none'; if(ico) ico.style.display=''; }
+}
+let epCount = 0;
+function addEpRow() {
+  epCount++;
+  const div = document.createElement('div');
+  div.className = 'ep-row';
+  div.innerHTML = '<input class="form-input ep-temp" style="width:80px;" placeholder="Temp." type="number" min="1" value="1">'+
+    '<input class="form-input ep-num" style="width:80px;" placeholder="Ep." type="number" min="1" value="'+epCount+'">'+
+    '<input class="form-input ep-titulo" placeholder="Título del episodio (opcional)" style="flex:1;">'+
+    '<input class="form-input ep-link" placeholder="Link del episodio *" style="flex:2;">'+
+    '<div class="ep-remove" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></div>';
+  document.getElementById('ep-rows').appendChild(div);
+}
+function toast(msg, type) {
+  type = type||'ok';
+  const t = document.getElementById('toast');
+  t.querySelector('i').className = type==='ok'?'ti ti-check':'ti ti-alert-circle';
+  t.className = 'toast '+type;
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
