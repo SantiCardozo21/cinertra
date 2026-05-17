@@ -220,11 +220,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .canal-now-time { font-size: 11px; color: var(--text4); margin-top: 3px; }
 
 
-.iframe-error { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0a0a0a; }
-.iframe-error.show { display: flex; }
-.iframe-error i { font-size: 48px; color: #333; }
-.iframe-error p { font-size: 14px; color: #666; text-align: center; max-width: 300px; line-height: 1.6; }
-.iframe-error .ext-btn { display: flex; align-items: center; gap: 7px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+
+
+
+
+
 
 /* ---- LOADING ---- */
 .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text4); gap: 8px; font-size: 13px; }
@@ -524,43 +524,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 <script>
 
 // ============================================================
-// IFRAME PLAYER
 // ============================================================
 let _currentLink = '';
 let _currentTitle = '';
 
-function openIframe(link, title) {
-  _currentLink = link;
-  _currentTitle = title;
-  const overlay = document.getElementById('iframe-overlay');
-  const iframe  = document.getElementById('iframe-player');
-  const error   = document.getElementById('iframe-error');
-  const extBtn  = document.getElementById('iframe-ext-btn');
-  document.getElementById('iframe-title').textContent = title;
-  error.classList.remove('show');
-  iframe.src = link;
-  overlay.classList.add('open');
-  extBtn.onclick = () => window.open(link, '_blank');
-  // Si el iframe no carga en 5 segundos, mostrar error
-  iframe.onerror = () => error.classList.add('show');
-  setTimeout(() => {
-    try {
-      if (!iframe.contentDocument && !iframe.contentWindow?.location?.href) {
-        error.classList.add('show');
-      }
+
     } catch(e) {
       // Si lanza error de CORS significa que cargó (solo bloqueado por cross-origin)
-      // En ese caso NO mostramos error porque el iframe SÍ cargó
+      
     }
   }, 4000);
 }
 
-function closeIframe() {
-  const overlay = document.getElementById('iframe-overlay');
-  const iframe  = document.getElementById('iframe-player');
-  overlay.classList.remove('open');
-  iframe.src = '';
-}
+
 
 // ============================================================
 // CONFIGURACIÓN SUPABASE
@@ -881,7 +857,7 @@ function openSerie(s) {
     const ep = eps[currentEp];
     document.getElementById('ps-ep-title').textContent = `T${currentTemp} · Ep ${currentEp+1}${ep?.titulo?' — '+ep.titulo:''}`;
     document.getElementById('ps-ep-dur').textContent = '1080p';
-    document.getElementById('ps-btn').onclick = () => ep?.link ? openIframe(ep.link, s.titulo + ' · T' + currentTemp + ' Ep ' + (currentEp+1)) : alert('Link no disponible');
+    document.getElementById('ps-btn').onclick = () => ep?.link ? window.open(ep.link, "_blank")) : alert('Link no disponible');
   }
   window.selectTemp = (t) => { currentTemp=t; currentEp=0; buildDrops(); document.getElementById('drop-temp').classList.remove('open'); };
   window.selectEp   = (i) => { currentEp=i; buildDrops(); document.getElementById('drop-ep').classList.remove('open'); };
@@ -909,7 +885,7 @@ function openCanal(c) {
   _canalLink = c.link_stream;
   _canalTitle = c.nombre;
 }
-window.openCanal = function() { if (_canalLink) openIframe(_canalLink, _canalTitle); }
+window.openCanal = function() { if (_canalLink) window.open(_canalLink, "_blank"); }
 
 // ============================================================
 // HELPERS
@@ -1005,28 +981,16 @@ loadAll();
 loadFutbol();
 </script>
 
-<!-- IFRAME PLAYER OVERLAY -->
-<div class="iframe-overlay" id="iframe-overlay">
-  <div class="iframe-topbar">
-    <div class="logo" style="font-size:16px;">Cine<em>tra</em></div>
-    <div class="iframe-title" id="iframe-title">Reproduciendo...</div>
-    <div class="iframe-close" onclick="closeIframe()"><i class="ti ti-x"></i> Cerrar</div>
+    
+    
   </div>
-  <div class="iframe-wrap">
-    <iframe id="iframe-player" allowfullscreen allow="autoplay; fullscreen"></iframe>
-    <div class="iframe-error" id="iframe-error">
-      <i class="ti ti-player-off"></i>
-      <p>Esta página no permite ser reproducida dentro de Cinetra. Podés abrirla en el navegador.</p>
-      <button class="ext-btn" id="iframe-ext-btn"><i class="ti ti-external-link"></i> Abrir en navegador</button>
-    </div>
+  
   </div>
 </div>
 
-    <button class="iframe-close" onclick="closeIframe()"><i class="ti ti-x"></i> Cerrar</button>
+    
   </div>
-  <div class="iframe-wrap">
-    <iframe id="iframe-player" src="" allowfullscreen allow="autoplay; fullscreen"></iframe>
-  </div>
+  
 </div>
 
 <!-- SUBSCRIPTION SCREEN -->
