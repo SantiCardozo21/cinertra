@@ -576,24 +576,68 @@ function navigate(section) {
   state.currentSection = section;
 }
 
-// CARGA DE DATOS
-async function loadAll() {
+// CARGA DE DATOS CON CACHÉ
+var CACHE_KEY = 'cinetra_cache';
+var CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+function saveCache(data) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+  } catch(e) {}
+}
+
+function loadCache() {
+  try {
+    var raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    var obj = JSON.parse(raw);
+    if (Date.now() - obj.ts > CACHE_TTL) return null;
+    return obj.data;
+  } catch(e) { return null; }
+}
+
+function applyData(d) {
+  state.peliculas = d.peliculas || [];
+  state.series    = d.series    || [];
+  state.anime     = d.anime     || [];
+  state.canales   = d.canales   || [];
+  renderHome(); renderTV();
+  renderGrid('peliculas', state.peliculas);
+  renderGrid('series', state.series);
+  renderGrid('anime', state.anime);
+  updatePlatCounts();
+}
+
+async function fetchFromDB() {
   var res = await Promise.all([
     db.from('peliculas').select('*').order('created_at',{ascending:false}),
     db.from('series').select('*').order('created_at',{ascending:false}),
     db.from('anime').select('*').order('created_at',{ascending:false}),
     db.from('canales').select('*').order('nombre')
   ]);
-  state.peliculas = res[0].data||[];
-  state.series    = res[1].data||[];
-  state.anime     = res[2].data||[];
-  state.canales   = res[3].data||[];
-  renderHome(); renderTV();
-  renderGrid('peliculas', state.peliculas);
-  renderGrid('series', state.series);
-  renderGrid('anime', state.anime);
-  updatePlatCounts();
+  var d = {
+    peliculas: res[0].data||[],
+    series:    res[1].data||[],
+    anime:     res[2].data||[],
+    canales:   res[3].data||[]
+  };
+  saveCache(d);
+  applyData(d);
   loadFutbol();
+}
+
+async function loadAll() {
+  var cached = loadCache();
+  if (cached) {
+    // Mostrar datos cacheados instantáneamente
+    applyData(cached);
+    loadFutbol();
+    // Actualizar en segundo plano silenciosamente
+    fetchFromDB();
+  } else {
+    // Primera vez: cargar desde DB
+    await fetchFromDB();
+  }
 }
 
 // RENDER HOME
