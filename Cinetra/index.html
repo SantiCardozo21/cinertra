@@ -152,7 +152,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .plat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
 .plat-card{background:var(--card);border:0.5px solid var(--border2);border-radius:var(--radius);padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.15s;}
 .plat-card:hover{border-color:var(--accent);}
-.plat-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
+.plat-icon{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
 .plat-name{font-size:13px;color:var(--text2);font-weight:500;}
 .plat-count{font-size:11px;color:var(--text4);}
 
@@ -282,6 +282,35 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   background: #3d8fe0;
 }
 
+
+/* FÚTBOL ESTILO PELOTALIBRE */
+.futbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.match-big { background: var(--card); border: 0.5px solid var(--border2); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+.match-big:hover { border-color: var(--accent); transform: translateY(-2px); }
+.match-big.live { border-color: rgba(229,57,53,0.5); background: linear-gradient(135deg, #1c1010, #1a1a1a); }
+.match-big.soon { border-color: rgba(255,152,0,0.4); background: linear-gradient(135deg, #1a1500, #1a1a1a); }
+.match-status-bar { display: flex; align-items: center; justify-content: space-between; }
+.match-status-badge { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.match-status-badge.live { background: rgba(229,57,53,0.15); color: #e53935; border: 0.5px solid rgba(229,57,53,0.3); }
+.match-status-badge.soon { background: rgba(255,152,0,0.15); color: #FF9800; border: 0.5px solid rgba(255,152,0,0.3); }
+.match-status-badge.next { background: rgba(76,175,80,0.15); color: #4CAF50; border: 0.5px solid rgba(76,175,80,0.3); }
+.match-liga { font-size: 11px; color: var(--text4); font-weight: 500; }
+.match-hora { font-size: 18px; font-weight: 700; color: #fff; }
+.match-teams-big { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.match-team { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+.team-escudo { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.team-name-big { font-size: 13px; font-weight: 500; color: var(--text2); text-align: center; }
+.match-vs { font-size: 22px; font-weight: 700; color: var(--text4); }
+.match-score-big { font-size: 28px; font-weight: 700; color: #fff; text-align: center; }
+.match-min { font-size: 12px; color: var(--live); font-weight: 600; text-align: center; }
+.match-provs { display: flex; gap: 6px; flex-wrap: wrap; }
+
+
+.plat-logo-wrap { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
+.plat-logo-img { width: 80%; height: 80%; object-fit: contain; }
+.plat-logo-fallback { font-size: 11px; font-weight: 700; color: #fff; position: absolute; }
+.plat-logo-img + .plat-logo-fallback { display: none; }
+
 </style>
 </head>
 <body>
@@ -381,14 +410,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <!-- FÚTBOL -->
     <div class="panel" id="panel-futbol">
       <div class="panel-title"><i class="ti ti-ball-football"></i> Fútbol en vivo</div>
-      <div class="prov-filter">
-        <div class="pf-btn active" onclick="filterFutbol('todos',this)"><i class="ti ti-layout-grid"></i> Todos</div>
-        <div class="pf-btn" onclick="filterFutbol('disney',this)">Disney+</div>
-        <div class="pf-btn" onclick="filterFutbol('espn',this)">ESPN</div>
-        <div class="pf-btn" onclick="filterFutbol('tnt',this)">TNT Sports</div>
-        <div class="pf-btn" onclick="filterFutbol('fox',this)">Fox Sports</div>
-        <div class="pf-btn" onclick="filterFutbol('tyc',this)">TyC Sports</div>
-        <div class="pf-btn" onclick="filterFutbol('dsports',this)">DSports</div>
+      <div class="tabs" id="futbol-tabs">
+        <div class="tab active" onclick="filterFutbolTab('todos',this)">🟢 Todos</div>
+        <div class="tab" onclick="filterFutbolTab('live',this)">🔴 En vivo</div>
+        <div class="tab" onclick="filterFutbolTab('soon',this)">🟡 En breve</div>
+        <div class="tab" onclick="filterFutbolTab('next',this)">📅 Próximos</div>
       </div>
       <div id="futbol-content"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
     </div>
@@ -442,12 +468,48 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="panel" id="panel-plataformas">
       <div class="panel-title"><i class="ti ti-apps"></i> Plataformas</div>
       <div class="plat-grid">
-        <div class="plat-card" onclick="filterByPlat('Netflix')"><div class="plat-icon" style="background:#e50914;">NET</div><div class="plat-name">Netflix</div><div class="plat-count" id="count-netflix">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Disney+')"><div class="plat-icon" style="background:#00a8e0;">DIS</div><div class="plat-name">Disney+</div><div class="plat-count" id="count-disney">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Max')"><div class="plat-icon" style="background:#1f618d;">HBO</div><div class="plat-name">Max</div><div class="plat-count" id="count-max">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Prime Video')"><div class="plat-icon" style="background:#00a8e0;font-size:10px;">PRI</div><div class="plat-name">Prime Video</div><div class="plat-count" id="count-prime">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Paramount+')"><div class="plat-icon" style="background:#0064ff;font-size:10px;">PAR</div><div class="plat-name">Paramount+</div><div class="plat-count" id="count-paramount">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Apple TV+')"><div class="plat-icon" style="background:#555;font-size:10px;">APP</div><div class="plat-name">Apple TV+</div><div class="plat-count" id="count-apple">— títulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Netflix')">
+          <div class="plat-logo-wrap" style="background:#e50914;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Netflix</span>
+          </div>
+          <div class="plat-name">Netflix</div><div class="plat-count" id="count-netflix">— títulos</div>
+        </div>
+        <div class="plat-card" onclick="filterByPlat('Disney+')">
+          <div class="plat-logo-wrap" style="background:#00a8e0;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Disney+</span>
+          </div>
+          <div class="plat-name">Disney+</div><div class="plat-count" id="count-disney">— títulos</div>
+        </div>
+        <div class="plat-card" onclick="filterByPlat('Max')">
+          <div class="plat-logo-wrap" style="background:#002be7;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Max</span>
+          </div>
+          <div class="plat-name">Max</div><div class="plat-count" id="count-max">— títulos</div>
+        </div>
+        <div class="plat-card" onclick="filterByPlat('Prime Video')">
+          <div class="plat-logo-wrap" style="background:#00a8e0;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Prime</span>
+          </div>
+          <div class="plat-name">Prime Video</div><div class="plat-count" id="count-prime">— títulos</div>
+        </div>
+        <div class="plat-card" onclick="filterByPlat('Paramount+')">
+          <div class="plat-logo-wrap" style="background:#0064ff;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Paramount_Plus_logo.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Paramount+</span>
+          </div>
+          <div class="plat-name">Paramount+</div><div class="plat-count" id="count-paramount">— títulos</div>
+        </div>
+        <div class="plat-card" onclick="filterByPlat('Apple TV+')">
+          <div class="plat-logo-wrap" style="background:#000;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/28/Apple_TV_Plus_Logo.svg" onerror="this.style.display='none'" class="plat-logo-img">
+            <span class="plat-logo-fallback">Apple TV+</span>
+          </div>
+          <div class="plat-name">Apple TV+</div><div class="plat-count" id="count-apple">— títulos</div>
+        </div>
       </div>
     </div>
 
@@ -765,7 +827,7 @@ function seriesRowHTML(s, type) {
   return '<div class="series-card" onclick="openSerie(\''+s.id+'\',\''+type+'\')">'
     +'<div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' · Ep '+(s.ultimo_episodio||1)+'</div></div>'
     +'<div class="series-title">'+s.titulo+'</div>'
-    +'<div class="series-ep">Nuevo · 1080p</div>'
+    +'<div class="series-ep">Nuevo episodio</div>'
     +'</div>';
 }
 
@@ -818,35 +880,68 @@ async function loadFutbol() {
   state.partidos = res.data || [];
   renderFutbol('todos');
 }
-function renderFutbol(prov) {
-  var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var man = new Date(hoy); man.setDate(man.getDate()+1);
-  var pas = new Date(hoy); pas.setDate(pas.getDate()+2);
-  var list = prov==='todos' ? state.partidos : state.partidos.filter(function(p){ return p.proveedores && p.proveedores.includes(prov); });
-  var live = list.filter(function(p){ return p.en_vivo; });
-  var dhoy = list.filter(function(p){ var d=new Date(p.fecha); d.setHours(0,0,0,0); return !p.en_vivo && d.getTime()===hoy.getTime(); });
-  var dman = list.filter(function(p){ var d=new Date(p.fecha); d.setHours(0,0,0,0); return d.getTime()===man.getTime(); });
-  var dpas = list.filter(function(p){ var d=new Date(p.fecha); d.setHours(0,0,0,0); return d.getTime()===pas.getTime(); });
-  function mHTML(p) {
-    var sc = p.en_vivo ? (p.goles_local||0)+' - '+(p.goles_visit||0) : '<span style="font-size:13px;color:var(--text4)">vs</span>';
-    var mt = p.en_vivo ? '<span class="mtime live">● '+(p.minuto||0)+"'</span>" : '<span class="mtime soon">'+fhora(p.fecha)+'</span>';
-    var provs = (p.proveedores||[]).map(function(pr){
-      return '<a class="prov-tag p-'+pr+'" href="'+(p['link_'+pr]||'#')+'" target="_blank">'+pname(pr)+'</a>';
-    }).join('');
-    return '<div class="match-card '+(p.en_vivo?'live-match':'')+'"><div class="match-teams"><div class="team-row"><div class="flag" style="background:'+(p.color_local||'#555')+'">'+(p.sigla_local||'L')+'</div>'+p.equipo_local+'</div><div class="team-row"><div class="flag" style="background:'+(p.color_visit||'#555')+'">'+(p.sigla_visit||'V')+'</div>'+p.equipo_visit+'</div></div><div class="score-col"><div class="score">'+sc+'</div>'+mt+'</div><div class="provs-col">'+provs+'</div></div>';
-  }
-  var html = '';
-  if (live.length) html += '<div class="day-block"><div class="day-label"><span class="live-pulse"></span> En vivo ahora</div>'+live.map(mHTML).join('')+'</div>';
-  if (dhoy.length) html += '<div class="day-block" style="margin-top:16px;"><div class="day-label">📅 Hoy</div>'+dhoy.map(mHTML).join('')+'</div>';
-  if (dman.length) html += '<div class="day-block" style="margin-top:16px;"><div class="day-label">📅 Mañana</div>'+dman.map(mHTML).join('')+'</div>';
-  if (dpas.length) html += '<div class="day-block" style="margin-top:16px;"><div class="day-label">📅 En 2 días</div>'+dpas.map(mHTML).join('')+'</div>';
-  if (!html) html = '<div class="empty">Sin partidos disponibles</div>';
-  document.getElementById('futbol-content').innerHTML = html;
+function matchBigHTML(p) {
+  var isLive = p.en_vivo;
+  var fecha = new Date(p.fecha);
+  var hora = fhora(p.fecha);
+  var ahora = new Date();
+  var diff = fecha - ahora;
+  var isSoon = !isLive && diff > 0 && diff < 30*60*1000; // en breve = menos de 30 min
+
+  var statusBadge = isLive
+    ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>'
+    : isSoon
+      ? '<div class="match-status-badge soon">⚡ EN BREVE</div>'
+      : '<div class="match-status-badge next">📅 PRÓXIMO</div>';
+
+  var centerContent = isLive
+    ? '<div class="match-score-big">'+(p.goles_local||0)+' - '+(p.goles_visit||0)+'</div><div class="match-min">● '+(p.minuto||0)+"'</div>"
+    : '<div class="match-vs">VS</div>';
+
+  var provs = (p.proveedores||[]).map(function(pr){
+    return '<a class="prov-tag p-'+pr+'" href="'+(p['link_'+pr]||'#')+'" target="_blank">'+pname(pr)+'</a>';
+  }).join('');
+
+  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'">'
+    +'<div class="match-status-bar">'
+      +statusBadge
+      +'<div class="match-hora">'+(isLive?'● LIVE':hora)+'</div>'
+    +'</div>'
+    +(p.liga?'<div class="match-liga">'+p.liga+'</div>':'')
+    +'<div class="match-teams-big">'
+      +'<div class="match-team">'
+        +'<div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div>'
+        +'<div class="team-name-big">'+p.equipo_local+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;">'+centerContent+'</div>'
+      +'<div class="match-team">'
+        +'<div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+'">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div>'
+        +'<div class="team-name-big">'+p.equipo_visit+'</div>'
+      +'</div>'
+    +'</div>'
+    +(provs?'<div class="match-provs">'+provs+'</div>':'')
+    +'</div>';
 }
-function filterFutbol(prov, el) {
-  document.querySelectorAll('.pf-btn').forEach(function(b){ b.classList.remove('active'); });
+
+function renderFutbol(filtro) {
+  filtro = filtro || 'todos';
+  var ahora = new Date();
+  var list = state.partidos;
+  if (filtro === 'live') list = list.filter(function(p){ return p.en_vivo; });
+  else if (filtro === 'soon') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)<30*60*1000 && (d-ahora)>0; });
+  else if (filtro === 'next') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)>=30*60*1000; });
+
+  if (!list.length) {
+    document.getElementById('futbol-content').innerHTML = '<div class="empty">Sin partidos en esta categoría</div>';
+    return;
+  }
+  document.getElementById('futbol-content').innerHTML = '<div class="futbol-grid">'+list.map(matchBigHTML).join('')+'</div>';
+}
+
+function filterFutbolTab(filtro, el) {
+  document.querySelectorAll('#futbol-tabs .tab').forEach(function(t){ t.classList.remove('active'); });
   el.classList.add('active');
-  renderFutbol(prov);
+  renderFutbol(filtro);
 }
 function pname(p) { return {disney:'Disney+',espn:'ESPN',tnt:'TNT Sports',fox:'Fox Sports',tyc:'TyC Sports',dsports:'DSports'}[p]||p; }
 function fhora(f) { try { return new Date(f).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs'; } catch(e){ return '—'; } }
