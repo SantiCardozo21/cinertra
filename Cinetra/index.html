@@ -575,42 +575,80 @@ var grads = [
 ];
 function rg() { return grads[Math.floor(Math.random()*grads.length)]; }
 
-// SUSCRIPCIÓN
+// SUSCRIPCIÓN CON DISPOSITIVO ÚNICO
+function getDeviceId() {
+  var id = localStorage.getItem('cinetra_device_id');
+  if (!id) {
+    id = 'dev-' + Date.now() + '-' + Math.random().toString(36).substring(2,10);
+    localStorage.setItem('cinetra_device_id', id);
+  }
+  return id;
+}
+
+function showErr(msg) {
+  var el = document.getElementById('sub-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
 async function checkCode() {
   var code = document.getElementById('sub-input').value.trim();
   if (!code) return showErr('Ingresá tu código');
   document.getElementById('sub-btn').disabled = true;
   document.getElementById('sub-loading').style.display = 'block';
   document.getElementById('sub-error').style.display = 'none';
+
   var res = await db.from('codigos').select('*').eq('codigo', code).single();
   document.getElementById('sub-btn').disabled = false;
   document.getElementById('sub-loading').style.display = 'none';
+
   if (res.error || !res.data) return showErr('Código inválido. Verificá e intentá de nuevo.');
-  var dias = Math.ceil((new Date(res.data.fecha_vencimiento) - new Date()) / (1000*60*60*24));
-  if (dias <= 0) return showErr('Tu suscripción venció. Contactá al administrador.');
-  await db.from('codigos').update({ ultimo_acceso: new Date().toISOString() }).eq('codigo', code);
-  sessionStorage.setItem('cinetra_code', code);
-  sessionStorage.setItem('cinetra_dias', dias);
+
+  var data = res.data;
+  var deviceId = getDeviceId();
+
+  // Verificar vencimiento
+  var dias = Math.ceil((new Date(data.fecha_vencimiento) - new Date()) / (1000*60*60*24));
+  if (dias <= 0) return showErr('Tu suscripción venció. Contactá al administrador para renovar.');
+
+  // Verificar dispositivo único
+  if (data.device_id && data.device_id !== deviceId) {
+    return showErr('Este código ya está en uso en otro dispositivo. Contactá al administrador.');
+  }
+
+  // Vincular dispositivo si es la primera vez
+  var updateObj = { ultimo_acceso: new Date().toISOString() };
+  if (!data.device_id) updateObj.device_id = deviceId;
+  await db.from('codigos').update(updateObj).eq('codigo', code);
+
+  localStorage.setItem('cinetra_code', code);
   showApp(code, dias);
 }
-function showErr(msg) {
-  var el = document.getElementById('sub-error');
-  el.textContent = msg; el.style.display = 'block';
-}
+
 function showApp(code, dias) {
   document.getElementById('sub-screen').classList.add('hidden');
-  var bar = document.getElementById('user-bar');
-  bar.classList.add('visible');
+  document.getElementById('user-bar').classList.add('visible');
   document.getElementById('ub-code').textContent = code;
   var d = document.getElementById('ub-days');
   d.textContent = dias + (dias===1?' día':' días');
   d.className = 'ub-days-num ' + (dias > 7 ? 'ok' : dias > 3 ? 'warn' : 'danger');
   loadAll();
 }
+
+// Verificar sesión guardada al iniciar
 (function init() {
-  var code = sessionStorage.getItem('cinetra_code');
-  var dias = parseInt(sessionStorage.getItem('cinetra_dias')||'0');
-  if (code && dias > 0) showApp(code, dias);
+  var code = localStorage.getItem('cinetra_code');
+  if (!code) return;
+  // Verificar en Supabase que el código sigue vigente
+  db.from('codigos').select('fecha_vencimiento,device_id').eq('codigo', code).single().then(function(res) {
+    if (res.error || !res.data) { localStorage.removeItem('cinetra_code'); return; }
+    var deviceId = getDeviceId();
+    if (res.data.device_id && res.data.device_id !== deviceId) {
+      localStorage.removeItem('cinetra_code'); return;
+    }
+    var dias = Math.ceil((new Date(res.data.fecha_vencimiento) - new Date()) / (1000*60*60*24));
+    if (dias <= 0) { localStorage.removeItem('cinetra_code'); return; }
+    showApp(code, dias);
+  });
 })();
 
 // NAVEGACIÓN
