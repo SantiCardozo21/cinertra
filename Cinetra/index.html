@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cinetra</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,11 +65,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .row::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
 
 /* CHANNEL CARDS */
-.ch-card{flex-shrink:0;width:90px;height:64px;background:var(--card);border:0.5px solid var(--border2);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:border-color 0.15s;overflow:hidden;}
+.ch-card{flex-shrink:0;width:110px;height:80px;background:var(--card);border:0.5px solid var(--border2);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:border-color 0.15s;overflow:hidden;padding:6px;}
 .ch-card:hover{border-color:var(--accent);}
-.ch-logo{width:40px;height:40px;border-radius:8px;object-fit:contain;background:transparent;}
-.ch-dot{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
-.ch-name{font-size:9.5px;color:var(--text4);}
+.ch-logo{width:54px;height:54px;border-radius:8px;object-fit:contain;background:transparent;}
+.ch-dot{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
+.ch-name{font-size:10px;color:var(--text4);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
 .live-tag{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--live);}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--live);}
 
@@ -754,7 +755,7 @@ function movieCardHTML(p) {
   var img = p.poster_url
     ? '<img src="'+p.poster_url+'" onerror="this.style.display=\'none\'">'
     : '<div class="poster-bg" style="background:'+rg()+';width:100%;height:100%;"></div>';
-  return '<div class="movie-card" onclick="openPelicula(\''+p.id+'\')"><div class="poster">'+img+'<div class="quality-badge">1080p</div></div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+(p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
+  return '<div class="movie-card" onclick="openPelicula(\''+p.id+'\')"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+(p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
 }
 
 function seriesRowHTML(s, type) {
@@ -792,7 +793,7 @@ function contentCardHTML(item, type) {
     ? '<img src="'+item.poster_url+'" onerror="this.style.display=\'none\'">'
     : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
   var fn = type==='pelicula' ? "openPelicula('"+item.id+"')" : "openSerie('"+item.id+"','"+type+"')";
-  return '<div class="content-card" onclick="'+fn+'"><div class="cposter">'+img+'<div class="quality-badge">1080p</div></div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'')+'</div></div>';
+  return '<div class="content-card" onclick="'+fn+'"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'')+'</div></div>';
 }
 function renderGrid(type, data) {
   var el = document.getElementById(type+'-grid');
@@ -997,81 +998,77 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
   }
 
   // Navegación con flechas del control remoto
+  var FOCUSABLE = '.nav-item,.tab,.ch-card,.movie-card,.series-card,.tv-card,.content-card,.plat-card,.cat-card,.watch-btn,.pf-btn,.back-btn,.ver-mas,.selector,.sub-btn,.match-card,.prov-tag';
+
+  function getFocusables() {
+    return Array.from(document.querySelectorAll(FOCUSABLE)).filter(function(el) {
+      var r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && !el.closest('.panel:not(.active)');
+    });
+  }
+
+  function findNearest(focusables, focused, direction) {
+    var fr = focused.getBoundingClientRect();
+    var fcx = fr.left + fr.width/2;
+    var fcy = fr.top + fr.height/2;
+    var best = null, bestScore = Infinity;
+    focusables.forEach(function(el) {
+      if (el === focused) return;
+      var r = el.getBoundingClientRect();
+      var cx = r.left + r.width/2;
+      var cy = r.top + r.height/2;
+      var dx = cx - fcx, dy = cy - fcy;
+      var inDir = false;
+      if (direction === 'right' && dx > 10) inDir = true;
+      if (direction === 'left'  && dx < -10) inDir = true;
+      if (direction === 'down'  && dy > 10) inDir = true;
+      if (direction === 'up'    && dy < -10) inDir = true;
+      if (!inDir) return;
+      // Penalizar elementos que están muy desviados en el eje perpendicular
+      var primary   = (direction==='right'||direction==='left') ? Math.abs(dx) : Math.abs(dy);
+      var secondary = (direction==='right'||direction==='left') ? Math.abs(dy) : Math.abs(dx);
+      var score = primary + secondary * 2;
+      if (score < bestScore) { bestScore = score; best = el; }
+    });
+    return best;
+  }
+
   document.addEventListener('keydown', function(e) {
     var focused = document.activeElement;
-    if (!focused || focused === document.body) {
-      // Si no hay foco, enfocar el primer nav-item
-      var first = document.querySelector('.nav-item');
-      if (first) first.focus();
+    var focusables = getFocusables();
+
+    // Si no hay foco activo, enfocar primer elemento
+    if (!focused || focused === document.body || !focusables.includes(focused)) {
+      var first = document.querySelector('.panel.active .nav-item, .panel.active .ch-card, .panel.active .movie-card');
+      if (!first) first = focusables[0];
+      if (first) { first.focus(); first.scrollIntoView({block:'nearest',inline:'nearest'}); }
       return;
     }
 
-    // Obtener todos los elementos focuseables visibles
-    var focusables = Array.from(document.querySelectorAll(
-      '.nav-item, .tab, .ch-card, .movie-card, .series-card, ' +
-      '.tv-card, .content-card, .plat-card, .cat-card, ' +
-      '.watch-btn, .pf-btn, .back-btn, .ver-mas, .selector, .sub-btn'
-    )).filter(function(el) {
-      var rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    });
-
-    var idx = focusables.indexOf(focused);
-    if (idx === -1) return;
-
     var next = null;
-    var focusedRect = focused.getBoundingClientRect();
+    var dir = null;
 
-    if (e.key === 'ArrowRight') {
-      // Siguiente elemento a la derecha o siguiente en lista
-      next = focusables[idx + 1] || focusables[idx];
+    if (e.key === 'ArrowRight') { dir = 'right'; e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { dir = 'left'; e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { dir = 'down'; e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { dir = 'up'; e.preventDefault(); }
+    else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-    } else if (e.key === 'ArrowLeft') {
-      next = focusables[idx - 1] || focusables[idx];
-      e.preventDefault();
-    } else if (e.key === 'ArrowDown') {
-      // Buscar elemento más cercano debajo
-      var candidates = focusables.filter(function(el, i) {
-        if (i <= idx) return false;
-        var r = el.getBoundingClientRect();
-        return r.top > focusedRect.bottom - 10;
-      });
-      if (candidates.length) {
-        next = candidates.reduce(function(best, el) {
-          var r = el.getBoundingClientRect();
-          var br = best.getBoundingClientRect();
-          var distEl = Math.abs(r.left - focusedRect.left) + (r.top - focusedRect.bottom);
-          var distBest = Math.abs(br.left - focusedRect.left) + (br.top - focusedRect.bottom);
-          return distEl < distBest ? el : best;
-        });
-      }
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      // Buscar elemento más cercano arriba
-      var candidates = focusables.filter(function(el, i) {
-        var r = el.getBoundingClientRect();
-        return r.bottom < focusedRect.top + 10;
-      });
-      if (candidates.length) {
-        next = candidates.reduce(function(best, el) {
-          var r = el.getBoundingClientRect();
-          var br = best.getBoundingClientRect();
-          var distEl = Math.abs(r.left - focusedRect.left) + (focusedRect.top - r.bottom);
-          var distBest = Math.abs(br.left - focusedRect.left) + (focusedRect.top - br.bottom);
-          return distEl < distBest ? el : best;
-        });
-      }
-      e.preventDefault();
-    } else if (e.key === 'Backspace' || e.key === 'Back') {
-      // Botón atrás del control remoto
+      focused.click();
+      return;
+    } else if (e.key === 'Backspace' || e.key === 'GoBack') {
       var backBtn = document.querySelector('.panel.active .back-btn');
       if (backBtn) backBtn.click();
       e.preventDefault();
+      return;
     }
 
-    if (next) {
-      next.focus();
-      next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    if (dir) {
+      next = findNearest(focusables, focused, dir);
+      if (next) {
+        next.focus();
+        next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
     }
   });
 
