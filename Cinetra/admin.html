@@ -6,7 +6,90 @@
 <title>Cinetra Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+// ============================================================
+// AGREGAR EPISODIOS A SERIES/ANIME EXISTENTES
+// ============================================================
+var _addEpTable = '';
+var _addEpItem = null;
+var _addEpCount = 0;
+
+function abrirAddEp(table, item) {
+  _addEpTable = table;
+  _addEpItem = item;
+  _addEpCount = 0;
+  document.getElementById('add-ep-serie-name').textContent = item.titulo;
+  document.getElementById('add-ep-rows-modal').innerHTML = '';
+  // Pre-calcular siguiente temporada y episodio
+  var existing = item.episodios || {};
+  var tempNums = Object.keys(existing).map(Number).sort(function(a,b){return a-b;});
+  var lastTemp = tempNums.length ? tempNums[tempNums.length-1] : 1;
+  var lastEps = existing[lastTemp] || [];
+  var nextEp = lastEps.length + 1;
+  addEpRowModal(lastTemp, nextEp);
+  document.getElementById('add-ep-modal-bg').classList.add('open');
+}
+
+function addEpRowModal(tempDef, epDef) {
+  _addEpCount++;
+  var div = document.createElement('div');
+  div.className = 'ep-row';
+  div.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Temporada Nº</span>'
+      +'<input class="form-input ep-temp" style="width:88px;" type="number" min="1" value="'+(tempDef||1)+'">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Capítulo Nº</span>'
+      +'<input class="form-input ep-num" style="width:88px;" type="number" min="1" value="'+(epDef||_addEpCount)+'">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:1;">'
+      +'<span style="font-size:9px;color:var(--text4);">Nombre del capítulo</span>'
+      +'<input class="form-input ep-titulo" placeholder="Opcional">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:2;">'
+      +'<span style="font-size:9px;color:var(--text4);">Link del capítulo *</span>'
+      +'<input class="form-input ep-link" placeholder="https://...">'
+    +'</div>'
+    +'<div class="ep-remove" onclick="this.parentElement.remove()" style="margin-top:18px;"><i class="ti ti-x"></i></div>';
+  document.getElementById('add-ep-rows-modal').appendChild(div);
+}
+
+function closeAddEpModal() {
+  document.getElementById('add-ep-modal-bg').classList.remove('open');
+}
+
+async function saveNuevosEpisodios() {
+  var rows = document.querySelectorAll('#add-ep-rows-modal .ep-row');
+  if (!rows.length) return toast('Agregá al menos un episodio', 'err');
+  var episodios = JSON.parse(JSON.stringify(_addEpItem.episodios || {}));
+  var maxTemp = 0, maxEp = 0, agregados = 0;
+  rows.forEach(function(row) {
+    var temp = parseInt(row.querySelector('.ep-temp').value) || 1;
+    var ep   = parseInt(row.querySelector('.ep-num').value) || 1;
+    var link = row.querySelector('.ep-link').value.trim();
+    var tit  = row.querySelector('.ep-titulo').value.trim();
+    if (!link) return;
+    if (!episodios[temp]) episodios[temp] = [];
+    var exists = episodios[temp].find(function(e){ return e.ep === ep; });
+    if (exists) { exists.link = link; if (tit) exists.titulo = tit; }
+    else { episodios[temp].push({ ep: ep, titulo: tit, link: link }); }
+    maxTemp = Math.max(maxTemp, temp);
+    maxEp = Math.max(maxEp, ep);
+    agregados++;
+  });
+  if (!agregados) return toast('Completá al menos un link', 'err');
+  var totalEps = Object.values(episodios).reduce(function(s,a){ return s+a.length; }, 0);
+  var res = await db.from(_addEpTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _addEpItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast(agregados+' episodio(s) guardado(s) en "'+_addEpItem.titulo+'" ✓', 'ok');
+  closeAddEpModal();
+  await loadAll();
+}
+
+</script>
 <style>
 :root {
   --bg:#0a0a0a;--bg2:#0d0d0d;--sidebar:#0f0f0f;--card:#161616;
@@ -909,6 +992,89 @@ function toast(msg, type) {
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3000);
 }
+
+// ============================================================
+// AGREGAR EPISODIOS A SERIES/ANIME EXISTENTES
+// ============================================================
+var _addEpTable = '';
+var _addEpItem = null;
+var _addEpCount = 0;
+
+function abrirAddEp(table, item) {
+  _addEpTable = table;
+  _addEpItem = item;
+  _addEpCount = 0;
+  document.getElementById('add-ep-serie-name').textContent = item.titulo;
+  document.getElementById('add-ep-rows-modal').innerHTML = '';
+  // Pre-calcular siguiente temporada y episodio
+  var existing = item.episodios || {};
+  var tempNums = Object.keys(existing).map(Number).sort(function(a,b){return a-b;});
+  var lastTemp = tempNums.length ? tempNums[tempNums.length-1] : 1;
+  var lastEps = existing[lastTemp] || [];
+  var nextEp = lastEps.length + 1;
+  addEpRowModal(lastTemp, nextEp);
+  document.getElementById('add-ep-modal-bg').classList.add('open');
+}
+
+function addEpRowModal(tempDef, epDef) {
+  _addEpCount++;
+  var div = document.createElement('div');
+  div.className = 'ep-row';
+  div.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Temporada Nº</span>'
+      +'<input class="form-input ep-temp" style="width:88px;" type="number" min="1" value="'+(tempDef||1)+'">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Capítulo Nº</span>'
+      +'<input class="form-input ep-num" style="width:88px;" type="number" min="1" value="'+(epDef||_addEpCount)+'">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:1;">'
+      +'<span style="font-size:9px;color:var(--text4);">Nombre del capítulo</span>'
+      +'<input class="form-input ep-titulo" placeholder="Opcional">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:2;">'
+      +'<span style="font-size:9px;color:var(--text4);">Link del capítulo *</span>'
+      +'<input class="form-input ep-link" placeholder="https://...">'
+    +'</div>'
+    +'<div class="ep-remove" onclick="this.parentElement.remove()" style="margin-top:18px;"><i class="ti ti-x"></i></div>';
+  document.getElementById('add-ep-rows-modal').appendChild(div);
+}
+
+function closeAddEpModal() {
+  document.getElementById('add-ep-modal-bg').classList.remove('open');
+}
+
+async function saveNuevosEpisodios() {
+  var rows = document.querySelectorAll('#add-ep-rows-modal .ep-row');
+  if (!rows.length) return toast('Agregá al menos un episodio', 'err');
+  var episodios = JSON.parse(JSON.stringify(_addEpItem.episodios || {}));
+  var maxTemp = 0, maxEp = 0, agregados = 0;
+  rows.forEach(function(row) {
+    var temp = parseInt(row.querySelector('.ep-temp').value) || 1;
+    var ep   = parseInt(row.querySelector('.ep-num').value) || 1;
+    var link = row.querySelector('.ep-link').value.trim();
+    var tit  = row.querySelector('.ep-titulo').value.trim();
+    if (!link) return;
+    if (!episodios[temp]) episodios[temp] = [];
+    var exists = episodios[temp].find(function(e){ return e.ep === ep; });
+    if (exists) { exists.link = link; if (tit) exists.titulo = tit; }
+    else { episodios[temp].push({ ep: ep, titulo: tit, link: link }); }
+    maxTemp = Math.max(maxTemp, temp);
+    maxEp = Math.max(maxEp, ep);
+    agregados++;
+  });
+  if (!agregados) return toast('Completá al menos un link', 'err');
+  var totalEps = Object.values(episodios).reduce(function(s,a){ return s+a.length; }, 0);
+  var res = await db.from(_addEpTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _addEpItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast(agregados+' episodio(s) guardado(s) en "'+_addEpItem.titulo+'" ✓', 'ok');
+  closeAddEpModal();
+  await loadAll();
+}
+
 </script>
 </body>
 </html>
