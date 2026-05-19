@@ -466,7 +466,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
     <!-- PLATAFORMAS -->
     <div class="panel" id="panel-plataformas">
-      <div class="panel-title"><i class="ti ti-apps"></i> Plataformas</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="back-btn" id="plat-back" style="display:none;" onclick="resetPlat()"><i class="ti ti-arrow-left"></i> Volver</div>
+        <div class="panel-title"><i class="ti ti-apps"></i> <span id="plat-title">Plataformas</span></div>
+      </div>
+      <div id="plat-content"></div>
       <div class="plat-grid">
         <div class="plat-card" onclick="filterByPlat('Netflix')">
           <div class="plat-logo-wrap" style="background:#e50914;">
@@ -515,8 +519,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
     <!-- GÉNEROS -->
     <div class="panel" id="panel-categorias">
-      <div class="panel-title"><i class="ti ti-tag"></i> Géneros</div>
-      <div class="cat-grid">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="back-btn" id="cat-back" style="display:none;" onclick="resetCat()"><i class="ti ti-arrow-left"></i> Volver</div>
+        <div class="panel-title"><i class="ti ti-tag"></i> <span id="cat-title">Géneros</span></div>
+      </div>
+      <div id="cat-content"></div>
+      <div class="cat-grid" id="cat-grid">
         <div class="cat-card" style="background:#1a1a2e;border-color:#3949AB;" onclick="filterByCat('Drama')"><i class="ti ti-masks-theater cat-icon" style="color:#7986CB;font-size:22px;"></i><div class="cat-name" style="color:#9FA8DA;">Drama</div></div>
         <div class="cat-card" style="background:#1a2a1a;border-color:#388E3C;" onclick="filterByCat('Comedia')"><i class="ti ti-mood-smile cat-icon" style="color:#66BB6A;font-size:22px;"></i><div class="cat-name" style="color:#A5D6A7;">Comedia</div></div>
         <div class="cat-card" style="background:#2a1a1a;border-color:#E53935;" onclick="filterByCat('Suspenso')"><i class="ti ti-question-mark cat-icon" style="color:#EF5350;font-size:22px;"></i><div class="cat-name" style="color:#EF9A9A;">Suspenso</div></div>
@@ -587,7 +595,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
           <div class="ep-info">
             <div class="ep-info-label">Reproduciendo</div>
             <div class="ep-info-title" id="ps-ep-title">—</div>
-            <div class="ep-info-dur">1080p</div>
+            
           </div>
           <button class="watch-btn" id="ps-btn"><i class="ti ti-external-link"></i> Ver episodio</button>
           <div class="open-note"><i class="ti ti-info-circle"></i> Se abre en nueva pestaña</div>
@@ -956,14 +964,49 @@ function updatePlatCounts() {
   });
 }
 function filterByPlat(plat) {
-  navigate('peliculas');
+  // Mostrar dentro del panel de plataformas
   var all = state.peliculas.concat(state.series).concat(state.anime).filter(function(i){ return i.plataforma===plat; });
-  renderGrid('peliculas', all);
+  var container = document.getElementById('plat-content');
+  if (!container) return;
+  document.getElementById('plat-title').textContent = plat;
+  document.getElementById('plat-back').style.display = 'flex';
+  container.innerHTML = all.length
+    ? '<div class="content-grid">' + all.map(function(item){
+        var isMovie = state.peliculas.find(function(p){ return p.id===item.id; });
+        var isAnime = state.anime.find(function(a){ return a.id===item.id; });
+        var type = isMovie ? 'pelicula' : isAnime ? 'anime' : 'serie';
+        return contentCardHTML(item, type);
+      }).join('') + '</div>'
+    : '<div class="empty">Sin contenido de '+plat+'</div>';
+}
+function resetPlat() {
+  document.getElementById('plat-title').textContent = 'Plataformas';
+  document.getElementById('plat-back').style.display = 'none';
+  document.getElementById('plat-content').innerHTML = '';
 }
 function filterByCat(cat) {
-  navigate('peliculas');
   var all = state.peliculas.concat(state.series).concat(state.anime).filter(function(i){ return i.genero && i.genero.includes(cat); });
-  renderGrid('peliculas', all);
+  var container = document.getElementById('cat-content');
+  if (!container) return;
+  document.getElementById('cat-title').textContent = cat;
+  document.getElementById('cat-back').style.display = 'flex';
+  var grid = document.getElementById('cat-grid');
+  if (grid) grid.style.display = 'none';
+  container.innerHTML = all.length
+    ? '<div class="content-grid">' + all.map(function(item){
+        var isMovie = state.peliculas.find(function(p){ return p.id===item.id; });
+        var isAnime = state.anime.find(function(a){ return a.id===item.id; });
+        var type = isMovie ? 'pelicula' : isAnime ? 'anime' : 'serie';
+        return contentCardHTML(item, type);
+      }).join('') + '</div>'
+    : '<div class="empty">Sin contenido de '+cat+'</div>';
+}
+function resetCat() {
+  document.getElementById('cat-title').textContent = 'Géneros';
+  document.getElementById('cat-back').style.display = 'none';
+  document.getElementById('cat-content').innerHTML = '';
+  var grid = document.getElementById('cat-grid');
+  if (grid) grid.style.display = 'grid';
 }
 
 // PLAYER PELÍCULA
@@ -974,7 +1017,7 @@ function openPelicula(id) {
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('pm-tags').innerHTML =
-    '<span class="tag q">1080p</span>'+
+    '<span class="tag q"></span>'+
     (p.anio?'<span class="tag">'+p.anio+'</span>':'')+
     (p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+
     (p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+
@@ -999,7 +1042,7 @@ function openSerie(id, type) {
   document.getElementById('ps-title').textContent = s.titulo;
   document.getElementById('ps-sinopsis').textContent = s.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('ps-tags').innerHTML =
-    '<span class="tag q">1080p</span>'+
+    '<span class="tag q"></span>'+
     (s.anio?'<span class="tag">'+s.anio+'</span>':'')+
     (s.genero?s.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+
     (s.plataforma?'<span class="tag">'+s.plataforma+'</span>':'');
