@@ -311,6 +311,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .plat-logo-fallback { font-size: 11px; font-weight: 700; color: #fff; position: absolute; }
 .plat-logo-img + .plat-logo-fallback { display: none; }
 
+
+/* VISOR WEB */
+.viewer-modal { position: fixed; inset: 0; background: #000; z-index: 3000; display: none; flex-direction: column; }
+.viewer-modal.open { display: flex; }
+.viewer-bar { height: 48px; background: #111; border-bottom: 0.5px solid #222; display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; }
+.viewer-logo { font-size: 16px; font-weight: 600; color: #fff; }
+.viewer-logo em { color: #4DA3FF; font-style: normal; }
+.viewer-site { font-size: 12px; color: #555; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-close { display: flex; align-items: center; gap: 6px; background: #e53935; color: #fff; border: none; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+.viewer-close:hover { background: #c62828; }
+.viewer-iframe { flex: 1; border: none; width: 100%; }
+.viewer-blocked { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0a0a0a; }
+.viewer-blocked-icon { font-size: 48px; }
+.viewer-blocked-msg { font-size: 14px; color: #888; text-align: center; }
+.viewer-open-btn { background: #4DA3FF; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+
+/* Sección páginas web */
+.webpages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 14px; }
+.webpage-card { background: var(--card); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 20px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; transition: all 0.15s; }
+.webpage-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.webpage-icon { width: 56px; height: 56px; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.webpage-icon img { width: 100%; height: 100%; object-fit: contain; }
+.webpage-name { font-size: 13px; font-weight: 500; color: var(--text2); text-align: center; }
+.webpage-desc { font-size: 11px; color: var(--text4); text-align: center; }
+
 </style>
 </head>
 <body>
@@ -356,6 +381,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="nav-item" id="nav-anime" onclick="navigate('anime')"><i class="ti ti-eye"></i> Animes</div>
     <div class="nav-item" id="nav-plataformas" onclick="navigate('plataformas')"><i class="ti ti-apps"></i> Plataformas</div>
     <div class="nav-item" id="nav-categorias" onclick="navigate('categorias')"><i class="ti ti-tag"></i> Géneros</div>
+    <div class="nav-item" id="nav-paginas" onclick="navigate('paginas')"><i class="ti ti-world"></i> Páginas web</div>
   </div>
 
   <div class="main">
@@ -546,6 +572,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       </div>
     </div>
 
+
+    <!-- PÁGINAS WEB -->
+    <div class="panel" id="panel-paginas">
+      <div class="panel-title"><i class="ti ti-world"></i> Páginas web</div>
+      <p style="font-size:12.5px;color:var(--text4);margin-bottom:4px;">Accedé directamente a estas páginas desde Cinetra. El contenido se muestra dentro de la app.</p>
+      <div class="webpages-grid">
+        <div class="webpage-card" onclick="openViewer('https://pelisjuanita.com','PelisJuanita')">
+          <div class="webpage-icon">🎬</div>
+          <div class="webpage-name">PelisJuanita</div>
+          <div class="webpage-desc">Películas y series</div>
+        </div>
+        <div class="webpage-card" onclick="openViewer('https://www.poseidonhd2.co','PoseidonHD')">
+          <div class="webpage-icon">🔱</div>
+          <div class="webpage-name">PoseidonHD</div>
+          <div class="webpage-desc">Películas y series HD</div>
+        </div>
+        <div class="webpage-card" onclick="openViewer('https://www4.animeflv.net','AnimeFLV')">
+          <div class="webpage-icon">⛩️</div>
+          <div class="webpage-name">AnimeFLV</div>
+          <div class="webpage-desc">Anime online</div>
+        </div>
+        <div class="webpage-card" onclick="openViewer('https://pelotalibretv.su','PelotaLibre')">
+          <div class="webpage-icon">⚽</div>
+          <div class="webpage-name">PelotaLibre</div>
+          <div class="webpage-desc">Fútbol en vivo</div>
+        </div>
+        <div class="webpage-card" onclick="openViewer('https://pelisplushd.bz','PelisPlus')">
+          <div class="webpage-icon">🎭</div>
+          <div class="webpage-name">PelisPlus</div>
+          <div class="webpage-desc">Películas y series</div>
+        </div>
+        <div class="webpage-card" onclick="openViewer('https://www.pelisplus.app','PelisPlus App')">
+          <div class="webpage-icon">📺</div>
+          <div class="webpage-name">Ver TV</div>
+          <div class="webpage-desc">TV en vivo gratis</div>
+        </div>
+      </div>
+    </div>
+
     <!-- PLAYER PELÍCULA -->
     <div class="panel" id="panel-player-movie">
       <div class="back-btn" id="back-movie" onclick="navigate('peliculas')"><i class="ti ti-arrow-left"></i> Volver</div>
@@ -732,6 +797,26 @@ function navigate(section) {
   if (nav) nav.classList.add('active');
   state.currentSection = section;
 }
+
+
+// VISOR WEB
+function openViewer(url, name) {
+  var modal = document.getElementById('viewer-modal');
+  var iframe = document.getElementById('viewer-iframe');
+  document.getElementById('viewer-site-label').textContent = name + ' — ' + url;
+  iframe.src = url;
+  modal.classList.add('open');
+}
+function closeViewer() {
+  var modal = document.getElementById('viewer-modal');
+  var iframe = document.getElementById('viewer-iframe');
+  modal.classList.remove('open');
+  iframe.src = '';
+}
+// Cerrar con Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeViewer();
+});
 
 // CARGA DE DATOS CON CACHÉ
 var CACHE_KEY = 'cinetra_cache';
@@ -1102,11 +1187,27 @@ function openCanal(id) {
 
 // HELPERS
 function toggleDrop(id) {
-  event.stopPropagation();
+  if (event) event.stopPropagation();
   var d = document.getElementById(id);
   var open = d.classList.contains('open');
   document.querySelectorAll('.dropdown').forEach(function(x){ x.classList.remove('open'); });
-  if (!open) d.classList.add('open');
+  if (!open) {
+    d.classList.add('open');
+    // Hacer los items focuseables con teclado
+    setTimeout(function() {
+      var items = d.querySelectorAll('.drop-item');
+      items.forEach(function(item, i) {
+        item.setAttribute('tabindex', '0');
+        item.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+          if (e.key === 'ArrowDown' && items[i+1]) { e.preventDefault(); items[i+1].focus(); }
+          if (e.key === 'ArrowUp' && items[i-1]) { e.preventDefault(); items[i-1].focus(); }
+          if (e.key === 'Escape') { d.classList.remove('open'); }
+        });
+      });
+      if (items.length) items[0].focus();
+    }, 50);
+  }
 }
 document.addEventListener('click', function(){ document.querySelectorAll('.dropdown').forEach(function(x){ x.classList.remove('open'); }); });
 
@@ -1219,5 +1320,16 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
 })();
 
 </script>
+
+<!-- VISOR WEB -->
+<div class="viewer-modal" id="viewer-modal">
+  <div class="viewer-bar">
+    <div class="viewer-logo">Cine<em>tra</em></div>
+    <div class="viewer-site" id="viewer-site-label">—</div>
+    <button class="viewer-close" onclick="closeViewer()"><i class="ti ti-x"></i> Cerrar</button>
+  </div>
+  <iframe class="viewer-iframe" id="viewer-iframe" src="" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"></iframe>
+</div>
+
 </body>
 </html>
