@@ -89,6 +89,213 @@ async function saveNuevosEpisodios() {
   await loadAll();
 }
 
+
+// ============================================================
+// EDICION COMPLETA SERIE/ANIME
+// ============================================================
+var _efTable = '', _efItem = null, _efCount = 0;
+
+function setEfTab(tab) {
+  ['info','eps','add'].forEach(function(t) {
+    var panel = document.getElementById('ef-panel-'+t);
+    var tabEl = document.getElementById('ef-tab-'+t);
+    if (panel) panel.style.display = 'none';
+    if (tabEl) { tabEl.style.background = 'var(--card)'; tabEl.style.color = 'var(--text3)'; }
+  });
+  var active = document.getElementById('ef-panel-'+tab);
+  var activeTab = document.getElementById('ef-tab-'+tab);
+  if (active) active.style.display = 'flex';
+  if (activeTab) {
+    activeTab.style.background = tab==='add' ? 'rgba(76,175,80,0.15)' : 'var(--accent)';
+    activeTab.style.color = tab==='add' ? '#4CAF50' : '#fff';
+  }
+}
+
+function openEditFull(table, item) {
+  _efTable = table; _efItem = item; _efCount = 0;
+  document.getElementById('ef-serie-name').textContent = item.titulo;
+  
+  // Llenar info
+  document.getElementById('ef-titulo').value = item.titulo||'';
+  document.getElementById('ef-anio').value = item.anio||'';
+  document.getElementById('ef-sinopsis').value = item.sinopsis||'';
+  document.getElementById('ef-poster').value = item.poster_url||'';
+  if (item.poster_url) {
+    var prev = document.getElementById('ef-prev');
+    prev.innerHTML = '<img src="'+item.poster_url+'" style="width:100%;height:100%;object-fit:cover;">';
+  }
+  // Plataforma
+  var platSel = document.getElementById('ef-plataforma');
+  for (var i=0; i<platSel.options.length; i++) {
+    if (platSel.options[i].value === item.plataforma) { platSel.selectedIndex = i; break; }
+  }
+  
+  // Géneros - mostrar checkboxes correctos según tipo
+  var isAnime = table === 'anime';
+  document.getElementById('ef-genres-series').style.display = isAnime ? 'none' : 'block';
+  document.getElementById('ef-genres-anime').style.display = isAnime ? 'block' : 'none';
+  var cls = isAnime ? 'edit-anime-genre' : 'edit-series-genre';
+  var currentGenres = (item.genero||'').split(',').map(function(g){ return g.trim(); });
+  document.querySelectorAll('.'+cls).forEach(function(cb) {
+    cb.checked = currentGenres.includes(cb.value);
+  });
+
+  // Llenar lista de episodios
+  buildEfEpsList();
+  
+  // Pre-agregar fila para nuevo episodio
+  document.getElementById('ef-new-eps').innerHTML = '';
+  var existing = item.episodios || {};
+  var tempNums = Object.keys(existing).map(Number).sort(function(a,b){return a-b;});
+  var lastTemp = tempNums.length ? tempNums[tempNums.length-1] : 1;
+  var lastEps = existing[lastTemp] || [];
+  addEfEpRow(lastTemp, lastEps.length+1);
+
+  setEfTab('info');
+  document.getElementById('edit-full-modal-bg').classList.add('open');
+}
+
+function buildEfEpsList() {
+  var episodios = _efItem.episodios || {};
+  var html = '';
+  var tempNums = Object.keys(episodios).map(Number).sort(function(a,b){return a-b;});
+  if (!tempNums.length) {
+    document.getElementById('ef-eps-list').innerHTML = '<div style="color:var(--text4);font-size:12px;text-align:center;padding:20px;">Sin episodios cargados</div>';
+    return;
+  }
+  tempNums.forEach(function(t) {
+    var eps = episodios[t] || [];
+    eps.sort(function(a,b){ return a.ep-b.ep; });
+    html += '<div style="font-size:11px;color:var(--accent);font-weight:500;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px;">Temporada '+t+'</div>';
+    eps.forEach(function(ep, i) {
+      html += '<div style="display:flex;gap:8px;align-items:center;">'
+        +'<span style="font-size:10px;color:var(--text4);width:50px;flex-shrink:0;">Ep '+ep.ep+'</span>'
+        +'<input class="form-input ef-ep-titulo" data-temp="'+t+'" data-ep="'+ep.ep+'" placeholder="Título" value="'+(ep.titulo||'')+'" style="flex:1;font-size:11px;padding:6px 10px;">'
+        +'<input class="form-input ef-ep-link" data-temp="'+t+'" data-ep="'+ep.ep+'" placeholder="Link" value="'+(ep.link||'')+'" style="flex:2;font-size:11px;padding:6px 10px;">'
+        +'<div onclick="removeEfEp('+t+','+ep.ep+')" style="width:26px;height:26px;border-radius:5px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;flex-shrink:0;"><i class="ti ti-x"></i></div>'
+        +'</div>';
+    });
+  });
+  document.getElementById('ef-eps-list').innerHTML = html;
+}
+
+function removeEfEp(temp, ep) {
+  if (!_efItem.episodios || !_efItem.episodios[temp]) return;
+  _efItem.episodios[temp] = _efItem.episodios[temp].filter(function(e){ return e.ep !== ep; });
+  buildEfEpsList();
+  toast('Episodio eliminado de la vista — guardá para confirmar', 'ok');
+}
+
+function addEfEpRow(tempDef, epDef) {
+  _efCount++;
+  var div = document.createElement('div');
+  div.className = 'ef-new-row';
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+  div.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Temp.</span>'
+      +'<input class="form-input ef-new-temp" type="number" min="1" value="'+(tempDef||1)+'" style="width:70px;padding:6px 8px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Cap.</span>'
+      +'<input class="form-input ef-new-num" type="number" min="1" value="'+(epDef||_efCount)+'" style="width:70px;padding:6px 8px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:1;">'
+      +'<span style="font-size:9px;color:var(--text4);">Nombre (opcional)</span>'
+      +'<input class="form-input ef-new-titulo" placeholder="Ej: El comienzo" style="padding:6px 10px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:2;">'
+      +'<span style="font-size:9px;color:var(--text4);">Link *</span>'
+      +'<input class="form-input ef-new-link" placeholder="https://..." style="padding:6px 10px;">'
+    +'</div>'
+    +'<div onclick="this.parentElement.remove()" style="width:28px;height:34px;border-radius:6px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-x"></i></div>';
+  document.getElementById('ef-new-eps').appendChild(div);
+}
+
+function closeEditFull() {
+  document.getElementById('edit-full-modal-bg').classList.remove('open');
+}
+
+async function saveEditInfo() {
+  var isAnime = _efTable === 'anime';
+  var cls = isAnime ? 'edit-anime-genre' : 'edit-series-genre';
+  var generos = Array.from(document.querySelectorAll('.'+cls+':checked')).map(function(c){ return c.value; }).join(', ');
+  var res = await db.from(_efTable).update({
+    titulo: document.getElementById('ef-titulo').value,
+    anio: document.getElementById('ef-anio').value,
+    plataforma: document.getElementById('ef-plataforma').value,
+    sinopsis: document.getElementById('ef-sinopsis').value,
+    poster_url: document.getElementById('ef-poster').value,
+    genero: generos || _efItem.genero
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast('Info actualizada ✓', 'ok');
+  await loadAll();
+}
+
+async function saveEditEps() {
+  // Recolectar los episodios editados
+  var episodios = JSON.parse(JSON.stringify(_efItem.episodios || {}));
+  document.querySelectorAll('.ef-ep-titulo').forEach(function(input) {
+    var t = parseInt(input.dataset.temp);
+    var ep = parseInt(input.dataset.ep);
+    if (episodios[t]) {
+      var found = episodios[t].find(function(e){ return e.ep===ep; });
+      if (found) found.titulo = input.value.trim();
+    }
+  });
+  document.querySelectorAll('.ef-ep-link').forEach(function(input) {
+    var t = parseInt(input.dataset.temp);
+    var ep = parseInt(input.dataset.ep);
+    if (episodios[t]) {
+      var found = episodios[t].find(function(e){ return e.ep===ep; });
+      if (found) found.link = input.value.trim();
+    }
+  });
+  // Calcular máximos
+  var maxTemp = Math.max.apply(null, Object.keys(episodios).map(Number).concat([1]));
+  var maxEp = 0;
+  Object.values(episodios).forEach(function(arr){ arr.forEach(function(e){ maxEp = Math.max(maxEp, e.ep); }); });
+  var res = await db.from(_efTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast('Episodios actualizados ✓', 'ok');
+  _efItem.episodios = episodios;
+  await loadAll();
+}
+
+async function saveNuevosEps() {
+  var rows = document.querySelectorAll('#ef-new-eps .ef-new-row');
+  var episodios = JSON.parse(JSON.stringify(_efItem.episodios || {}));
+  var agregados = 0, maxTemp = 0, maxEp = 0;
+  rows.forEach(function(row) {
+    var temp = parseInt(row.querySelector('.ef-new-temp').value)||1;
+    var ep   = parseInt(row.querySelector('.ef-new-num').value)||1;
+    var link = row.querySelector('.ef-new-link').value.trim();
+    var tit  = row.querySelector('.ef-new-titulo').value.trim();
+    if (!link) return;
+    if (!episodios[temp]) episodios[temp] = [];
+    var exists = episodios[temp].find(function(e){ return e.ep===ep; });
+    if (exists) { exists.link=link; if(tit) exists.titulo=tit; }
+    else { episodios[temp].push({ep:ep, titulo:tit, link:link}); }
+    maxTemp = Math.max(maxTemp, temp);
+    maxEp = Math.max(maxEp, ep);
+    agregados++;
+  });
+  if (!agregados) return toast('Completá al menos un link', 'err');
+  var res = await db.from(_efTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast(agregados+' episodio(s) guardado(s) ✓', 'ok');
+  _efItem.episodios = episodios;
+  document.getElementById('ef-new-eps').innerHTML = '';
+  addEfEpRow(maxTemp, maxEp+1);
+  buildEfEpsList();
+  await loadAll();
+}
+
 </script>
 <style>
 :root {
@@ -1072,6 +1279,213 @@ async function saveNuevosEpisodios() {
   if (res.error) return toast('Error: '+res.error.message, 'err');
   toast(agregados+' episodio(s) guardado(s) en "'+_addEpItem.titulo+'" ✓', 'ok');
   closeAddEpModal();
+  await loadAll();
+}
+
+
+// ============================================================
+// EDICION COMPLETA SERIE/ANIME
+// ============================================================
+var _efTable = '', _efItem = null, _efCount = 0;
+
+function setEfTab(tab) {
+  ['info','eps','add'].forEach(function(t) {
+    var panel = document.getElementById('ef-panel-'+t);
+    var tabEl = document.getElementById('ef-tab-'+t);
+    if (panel) panel.style.display = 'none';
+    if (tabEl) { tabEl.style.background = 'var(--card)'; tabEl.style.color = 'var(--text3)'; }
+  });
+  var active = document.getElementById('ef-panel-'+tab);
+  var activeTab = document.getElementById('ef-tab-'+tab);
+  if (active) active.style.display = 'flex';
+  if (activeTab) {
+    activeTab.style.background = tab==='add' ? 'rgba(76,175,80,0.15)' : 'var(--accent)';
+    activeTab.style.color = tab==='add' ? '#4CAF50' : '#fff';
+  }
+}
+
+function openEditFull(table, item) {
+  _efTable = table; _efItem = item; _efCount = 0;
+  document.getElementById('ef-serie-name').textContent = item.titulo;
+  
+  // Llenar info
+  document.getElementById('ef-titulo').value = item.titulo||'';
+  document.getElementById('ef-anio').value = item.anio||'';
+  document.getElementById('ef-sinopsis').value = item.sinopsis||'';
+  document.getElementById('ef-poster').value = item.poster_url||'';
+  if (item.poster_url) {
+    var prev = document.getElementById('ef-prev');
+    prev.innerHTML = '<img src="'+item.poster_url+'" style="width:100%;height:100%;object-fit:cover;">';
+  }
+  // Plataforma
+  var platSel = document.getElementById('ef-plataforma');
+  for (var i=0; i<platSel.options.length; i++) {
+    if (platSel.options[i].value === item.plataforma) { platSel.selectedIndex = i; break; }
+  }
+  
+  // Géneros - mostrar checkboxes correctos según tipo
+  var isAnime = table === 'anime';
+  document.getElementById('ef-genres-series').style.display = isAnime ? 'none' : 'block';
+  document.getElementById('ef-genres-anime').style.display = isAnime ? 'block' : 'none';
+  var cls = isAnime ? 'edit-anime-genre' : 'edit-series-genre';
+  var currentGenres = (item.genero||'').split(',').map(function(g){ return g.trim(); });
+  document.querySelectorAll('.'+cls).forEach(function(cb) {
+    cb.checked = currentGenres.includes(cb.value);
+  });
+
+  // Llenar lista de episodios
+  buildEfEpsList();
+  
+  // Pre-agregar fila para nuevo episodio
+  document.getElementById('ef-new-eps').innerHTML = '';
+  var existing = item.episodios || {};
+  var tempNums = Object.keys(existing).map(Number).sort(function(a,b){return a-b;});
+  var lastTemp = tempNums.length ? tempNums[tempNums.length-1] : 1;
+  var lastEps = existing[lastTemp] || [];
+  addEfEpRow(lastTemp, lastEps.length+1);
+
+  setEfTab('info');
+  document.getElementById('edit-full-modal-bg').classList.add('open');
+}
+
+function buildEfEpsList() {
+  var episodios = _efItem.episodios || {};
+  var html = '';
+  var tempNums = Object.keys(episodios).map(Number).sort(function(a,b){return a-b;});
+  if (!tempNums.length) {
+    document.getElementById('ef-eps-list').innerHTML = '<div style="color:var(--text4);font-size:12px;text-align:center;padding:20px;">Sin episodios cargados</div>';
+    return;
+  }
+  tempNums.forEach(function(t) {
+    var eps = episodios[t] || [];
+    eps.sort(function(a,b){ return a.ep-b.ep; });
+    html += '<div style="font-size:11px;color:var(--accent);font-weight:500;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px;">Temporada '+t+'</div>';
+    eps.forEach(function(ep, i) {
+      html += '<div style="display:flex;gap:8px;align-items:center;">'
+        +'<span style="font-size:10px;color:var(--text4);width:50px;flex-shrink:0;">Ep '+ep.ep+'</span>'
+        +'<input class="form-input ef-ep-titulo" data-temp="'+t+'" data-ep="'+ep.ep+'" placeholder="Título" value="'+(ep.titulo||'')+'" style="flex:1;font-size:11px;padding:6px 10px;">'
+        +'<input class="form-input ef-ep-link" data-temp="'+t+'" data-ep="'+ep.ep+'" placeholder="Link" value="'+(ep.link||'')+'" style="flex:2;font-size:11px;padding:6px 10px;">'
+        +'<div onclick="removeEfEp('+t+','+ep.ep+')" style="width:26px;height:26px;border-radius:5px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;flex-shrink:0;"><i class="ti ti-x"></i></div>'
+        +'</div>';
+    });
+  });
+  document.getElementById('ef-eps-list').innerHTML = html;
+}
+
+function removeEfEp(temp, ep) {
+  if (!_efItem.episodios || !_efItem.episodios[temp]) return;
+  _efItem.episodios[temp] = _efItem.episodios[temp].filter(function(e){ return e.ep !== ep; });
+  buildEfEpsList();
+  toast('Episodio eliminado de la vista — guardá para confirmar', 'ok');
+}
+
+function addEfEpRow(tempDef, epDef) {
+  _efCount++;
+  var div = document.createElement('div');
+  div.className = 'ef-new-row';
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+  div.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Temp.</span>'
+      +'<input class="form-input ef-new-temp" type="number" min="1" value="'+(tempDef||1)+'" style="width:70px;padding:6px 8px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;">'
+      +'<span style="font-size:9px;color:var(--text4);">Cap.</span>'
+      +'<input class="form-input ef-new-num" type="number" min="1" value="'+(epDef||_efCount)+'" style="width:70px;padding:6px 8px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:1;">'
+      +'<span style="font-size:9px;color:var(--text4);">Nombre (opcional)</span>'
+      +'<input class="form-input ef-new-titulo" placeholder="Ej: El comienzo" style="padding:6px 10px;">'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;flex:2;">'
+      +'<span style="font-size:9px;color:var(--text4);">Link *</span>'
+      +'<input class="form-input ef-new-link" placeholder="https://..." style="padding:6px 10px;">'
+    +'</div>'
+    +'<div onclick="this.parentElement.remove()" style="width:28px;height:34px;border-radius:6px;border:0.5px solid var(--border2);background:var(--card);color:#555;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-x"></i></div>';
+  document.getElementById('ef-new-eps').appendChild(div);
+}
+
+function closeEditFull() {
+  document.getElementById('edit-full-modal-bg').classList.remove('open');
+}
+
+async function saveEditInfo() {
+  var isAnime = _efTable === 'anime';
+  var cls = isAnime ? 'edit-anime-genre' : 'edit-series-genre';
+  var generos = Array.from(document.querySelectorAll('.'+cls+':checked')).map(function(c){ return c.value; }).join(', ');
+  var res = await db.from(_efTable).update({
+    titulo: document.getElementById('ef-titulo').value,
+    anio: document.getElementById('ef-anio').value,
+    plataforma: document.getElementById('ef-plataforma').value,
+    sinopsis: document.getElementById('ef-sinopsis').value,
+    poster_url: document.getElementById('ef-poster').value,
+    genero: generos || _efItem.genero
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast('Info actualizada ✓', 'ok');
+  await loadAll();
+}
+
+async function saveEditEps() {
+  // Recolectar los episodios editados
+  var episodios = JSON.parse(JSON.stringify(_efItem.episodios || {}));
+  document.querySelectorAll('.ef-ep-titulo').forEach(function(input) {
+    var t = parseInt(input.dataset.temp);
+    var ep = parseInt(input.dataset.ep);
+    if (episodios[t]) {
+      var found = episodios[t].find(function(e){ return e.ep===ep; });
+      if (found) found.titulo = input.value.trim();
+    }
+  });
+  document.querySelectorAll('.ef-ep-link').forEach(function(input) {
+    var t = parseInt(input.dataset.temp);
+    var ep = parseInt(input.dataset.ep);
+    if (episodios[t]) {
+      var found = episodios[t].find(function(e){ return e.ep===ep; });
+      if (found) found.link = input.value.trim();
+    }
+  });
+  // Calcular máximos
+  var maxTemp = Math.max.apply(null, Object.keys(episodios).map(Number).concat([1]));
+  var maxEp = 0;
+  Object.values(episodios).forEach(function(arr){ arr.forEach(function(e){ maxEp = Math.max(maxEp, e.ep); }); });
+  var res = await db.from(_efTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast('Episodios actualizados ✓', 'ok');
+  _efItem.episodios = episodios;
+  await loadAll();
+}
+
+async function saveNuevosEps() {
+  var rows = document.querySelectorAll('#ef-new-eps .ef-new-row');
+  var episodios = JSON.parse(JSON.stringify(_efItem.episodios || {}));
+  var agregados = 0, maxTemp = 0, maxEp = 0;
+  rows.forEach(function(row) {
+    var temp = parseInt(row.querySelector('.ef-new-temp').value)||1;
+    var ep   = parseInt(row.querySelector('.ef-new-num').value)||1;
+    var link = row.querySelector('.ef-new-link').value.trim();
+    var tit  = row.querySelector('.ef-new-titulo').value.trim();
+    if (!link) return;
+    if (!episodios[temp]) episodios[temp] = [];
+    var exists = episodios[temp].find(function(e){ return e.ep===ep; });
+    if (exists) { exists.link=link; if(tit) exists.titulo=tit; }
+    else { episodios[temp].push({ep:ep, titulo:tit, link:link}); }
+    maxTemp = Math.max(maxTemp, temp);
+    maxEp = Math.max(maxEp, ep);
+    agregados++;
+  });
+  if (!agregados) return toast('Completá al menos un link', 'err');
+  var res = await db.from(_efTable).update({
+    episodios: episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+  }).eq('id', _efItem.id);
+  if (res.error) return toast('Error: '+res.error.message, 'err');
+  toast(agregados+' episodio(s) guardado(s) ✓', 'ok');
+  _efItem.episodios = episodios;
+  document.getElementById('ef-new-eps').innerHTML = '';
+  addEfEpRow(maxTemp, maxEp+1);
+  buildEfEpsList();
   await loadAll();
 }
 
