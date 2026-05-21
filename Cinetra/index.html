@@ -92,12 +92,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .series-ep{font-size:10px;color:var(--text4);margin-top:1px;}
 
 /* TV GRID */
-.tv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;}
-.tv-card{background:var(--card);border:0.5px solid var(--border2);border-radius:var(--radius);padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.15s;}
-.tv-card:hover{border-color:var(--accent);}
-.tv-logo{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden;background:var(--card);}
+.tv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+.tv-card{background:var(--card);border:0.5px solid var(--border2);border-radius:14px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:all 0.18s;position:relative;overflow:hidden;}
+.tv-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(77,163,255,0.05),transparent);opacity:0;transition:opacity 0.18s;}
+.tv-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.tv-card:hover::before{opacity:1;}
+.tv-logo{width:72px;height:72px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;overflow:hidden;background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .tv-logo img{width:100%;height:100%;object-fit:contain;}
-.tv-name{font-size:12px;color:var(--text2);text-align:center;font-weight:500;}
+.tv-name{font-size:13px;color:var(--text2);text-align:center;font-weight:500;}
+.tv-live-badge{display:flex;align-items:center;gap:4px;background:rgba(229,57,53,0.12);border:0.5px solid rgba(229,57,53,0.3);padding:3px 10px;border-radius:20px;}
+.tv-live-dot{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.2s infinite;}
+.tv-live-text{font-size:10px;color:var(--live);font-weight:600;letter-spacing:0.5px;}
 
 /* TABS */
 .tabs{display:flex;gap:7px;flex-wrap:wrap;}
@@ -200,14 +205,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 /* CANAL PLAYER */
 .back-btn{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text4);cursor:pointer;width:fit-content;transition:color 0.12s;margin-bottom:4px;}
 .back-btn:hover{color:var(--accent);}
-.canal-header{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
-.canal-logo-big{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.canal-player-wrap{display:flex;flex-direction:column;gap:16px;max-width:900px;}
+.canal-header{display:flex;align-items:center;gap:16px;}
+.canal-logo-big{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.4);}
 .canal-logo-big img{width:100%;height:100%;object-fit:contain;}
-.canal-h2{font-size:20px;font-weight:600;color:var(--text);}
-.live-tag2{display:inline-flex;align-items:center;gap:5px;background:rgba(229,57,53,0.12);color:var(--live);font-size:11px;padding:3px 10px;border-radius:20px;margin-top:5px;font-weight:500;}
-.canal-video{width:100%;max-width:500px;aspect-ratio:16/9;background:#000;border-radius:var(--radius);border:0.5px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;position:relative;overflow:hidden;}
-.canal-video-bg{position:absolute;inset:0;background:linear-gradient(135deg,#080818,#180808);}
-.canal-now{background:var(--card);border-radius:8px;padding:12px 16px;border:0.5px solid var(--border2);max-width:500px;margin-top:10px;}
+.canal-h2{font-size:22px;font-weight:600;color:var(--text);}
+.live-tag2{display:inline-flex;align-items:center;gap:5px;background:rgba(229,57,53,0.12);color:var(--live);font-size:11px;padding:4px 12px;border-radius:20px;margin-top:5px;font-weight:600;border:0.5px solid rgba(229,57,53,0.25);}
+.canal-video{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;border:0.5px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color 0.15s;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+.canal-video:hover{border-color:var(--accent);}
+.canal-video-bg{position:absolute;inset:0;background:linear-gradient(135deg,#050510,#100505);}
+.canal-play-btn{width:64px;height:64px;border-radius:50%;background:rgba(77,163,255,0.9);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;transition:transform 0.15s,background 0.15s;}
+.canal-video:hover .canal-play-btn{transform:scale(1.1);background:var(--accent);}
+.canal-play-btn i{font-size:26px;color:#fff;margin-left:4px;}
+.canal-play-label{font-size:13px;color:rgba(255,255,255,0.5);position:relative;z-index:1;}
+.canal-video-logo{position:absolute;top:14px;left:14px;width:44px;height:44px;border-radius:10px;overflow:hidden;z-index:1;opacity:0.7;}
+.canal-video-logo img{width:100%;height:100%;object-fit:contain;}
+.canal-open-btn{width:100%;padding:13px;background:var(--accent);border-radius:10px;border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);transition:background 0.15s;}
+.canal-open-btn:hover{background:#3d8fe0;}
+.canal-now{background:var(--card);border-radius:10px;padding:14px 16px;border:0.5px solid var(--border2);}
 .canal-now-label{font-size:10px;color:var(--text4);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
 .canal-now-prog{font-size:13.5px;color:var(--text2);font-weight:500;}
 
@@ -670,22 +685,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
     <!-- PLAYER CANAL -->
     <div class="panel" id="panel-player-canal">
-      <div class="back-btn" onclick="navigate('tv')"><i class="ti ti-arrow-left"></i> Volver a TV en vivo</div>
-      <div class="canal-header">
-        <div class="canal-logo-big" id="pc-logo"></div>
-        <div>
-          <div class="canal-h2" id="pc-name">—</div>
-          <div class="live-tag2"><span class="live-dot"></span> En vivo ahora</div>
+      <div class="back-btn" onclick="navigate('tv')" style="margin-bottom:8px;"><i class="ti ti-arrow-left"></i> Volver a TV en vivo</div>
+      <div class="canal-player-wrap">
+        <div class="canal-header">
+          <div class="canal-logo-big" id="pc-logo"></div>
+          <div>
+            <div class="canal-h2" id="pc-name">—</div>
+            <div class="live-tag2"><span class="live-dot" style="width:7px;height:7px;border-radius:50%;background:var(--live);animation:pulse 1.2s infinite;"></span> EN VIVO</div>
+          </div>
         </div>
-      </div>
-      <div class="canal-video" id="pc-video">
-        <div class="canal-video-bg"></div>
-        <div class="play-btn" style="position:relative;z-index:1;"><i class="ti ti-player-play-filled"></i></div>
-        <div style="font-size:12px;color:var(--text4);position:relative;z-index:1;">Tocá para ver en vivo</div>
-      </div>
-      <div class="canal-now">
-        <div class="canal-now-label">Se abrirá en nueva pestaña</div>
-        <div class="canal-now-prog" id="pc-prog">Hacé clic en el reproductor para ver</div>
+        <div class="canal-video" id="pc-video">
+          <div class="canal-video-bg"></div>
+          <div class="canal-video-logo" id="pc-video-logo"></div>
+          <div class="canal-play-btn"><i class="ti ti-player-play-filled"></i></div>
+          <div class="canal-play-label">Tocá para ver en vivo</div>
+        </div>
+        <button class="canal-open-btn" id="pc-open-btn">
+          <i class="ti ti-external-link"></i> Ver canal en vivo
+        </button>
+        <div class="canal-now">
+          <div class="canal-now-label">📡 Canal seleccionado</div>
+          <div class="canal-now-prog" id="pc-prog">—</div>
+        </div>
       </div>
     </div>
 
@@ -1172,17 +1193,35 @@ function openCanal(id) {
   var c = state.canales.find(function(x){ return x.id===id; });
   if (!c) return;
   navigate('player-canal');
+  
+  // Logo grande
   var logo = document.getElementById('pc-logo');
   if (c.logo_url) {
     logo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">';
-    logo.style.background = '#1a1a1a';
+    logo.style.background = '#141414';
   } else {
-    logo.textContent = c.siglas||c.nombre.substring(0,3).toUpperCase();
+    logo.innerHTML = '<span>'+( c.siglas||c.nombre.substring(0,3).toUpperCase())+'</span>';
     logo.style.background = c.color||'#555';
   }
+  
+  // Logo dentro del video
+  var videoLogo = document.getElementById('pc-video-logo');
+  if (c.logo_url) {
+    videoLogo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">';
+    videoLogo.style.display = 'block';
+  } else {
+    videoLogo.style.display = 'none';
+  }
+  
   document.getElementById('pc-name').textContent = c.nombre;
+  document.getElementById('pc-prog').textContent = c.nombre + ' — Transmisión en vivo';
+  
   _canalLink = c.link_stream;
-  document.getElementById('pc-video').onclick = function(){ if(_canalLink) window.open(_canalLink,'_blank'); };
+  
+  // Click en video y en botón
+  var openFn = function(){ if(_canalLink) window.open(_canalLink,'_blank'); };
+  document.getElementById('pc-video').onclick = openFn;
+  document.getElementById('pc-open-btn').onclick = openFn;
 }
 
 // HELPERS
