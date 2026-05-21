@@ -251,13 +251,25 @@ export default async function handler(req) {
   if (debug) {
     const html = await fetchPage(debug);
     if (!html) return new Response('Error al obtener página', { status: 500 });
-    const urlsFound = html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [];
+    // Extraer __NEXT_DATA__ que Next.js inyecta con todos los datos
+    const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]+?)<\/script>/);
+    if (nextDataMatch) {
+      try {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        return new Response(JSON.stringify({
+          source: 'NEXT_DATA',
+          keys: Object.keys(nextData?.props?.pageProps || {}),
+          data: nextData?.props?.pageProps
+        }), { headers: { 'Content-Type': 'application/json' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ error: 'parse error', raw: nextDataMatch[1].substring(0,500) }), 
+          { headers: { 'Content-Type': 'application/json' } });
+      }
+    }
     return new Response(JSON.stringify({
       length: html.length,
-      first300: html.substring(0, 300),
-      urls_peliculas: [...new Set(urlsFound)].slice(0, 10),
-      tiene_pelicula: html.includes('/pelicula/'),
-      tiene_genero: html.includes('nero')
+      has_next_data: html.includes('__NEXT_DATA__'),
+      snippet: html.substring(html.indexOf('__NEXT_DATA__') - 10, html.indexOf('__NEXT_DATA__') + 200)
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
