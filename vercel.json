@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/scraper?secret=cinetra-scraper-2024&source=all",
+      "schedule": "0 3 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/Cinetra/$1"
+    }
+  ]
+}
