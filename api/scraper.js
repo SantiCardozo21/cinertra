@@ -74,9 +74,12 @@ async function scrapePoseidon() {
     const html = await fetchPage(`https://www.poseidonhd2.co/peliculas?page=${page}`);
     if (!html) continue;
 
-    // PoseidonHD: el HTML crudo tiene las URLs de películas en formato /pelicula/ID/slug
+    // PoseidonHD: el HTML crudo tiene Unicode escapado \u003C etc
+    // Las URLs aparecen como /pelicula/ID/slug o como href="/pelicula/..."
+    // Decodificar el HTML primero
+    const htmlDecoded = html.replace(/\\u003C/g,'<').replace(/\\u003E/g,'>').replace(/\\u0022/g,'"').replace(/\\u002F/g,'/');
     // Extraer URLs únicas de películas
-    const pelUrls = [...new Set(html.match(/\/pelicula\/\d+\/[a-z0-9\-]+/g) || [])];
+    const pelUrls = [...new Set((htmlDecoded.match(/\/pelicula\/\d+\/[a-z0-9\-]+/g) || []))];
     for (const pelUrl of pelUrls) {
       const link = `https://www.poseidonhd2.co${pelUrl}`;
       // Extraer título del slug
@@ -85,9 +88,9 @@ async function scrapePoseidon() {
       const slug = slugMatch[1];
       const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
       // Buscar el bloque de esta película en el HTML para extraer datos
-      const idx = html.indexOf(pelUrl);
+      const idx = htmlDecoded.indexOf(pelUrl);
       if (idx === -1) continue;
-      const bloque = html.substring(Math.max(0,idx-500), idx+1000);
+      const bloque = htmlDecoded.substring(Math.max(0,idx-500), idx+1000);
       // Extraer año
       const anioMatch = bloque.match(/>(20\d{2})</) || bloque.match(/(20\d{2})/);
       const anio = anioMatch ? anioMatch[1] : '';
