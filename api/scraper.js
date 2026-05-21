@@ -74,18 +74,29 @@ async function scrapePoseidon() {
     const html = await fetchPage(`https://www.poseidonhd2.co/peliculas?page=${page}`);
     if (!html) continue;
 
-    // Extraer items de la grilla
-    const itemRegex = /href="(\/pelicula\/\d+\/[^"]+)"[\s\S]{1,500}?src="([^"]+)"[\s\S]{1,300}?<h2[^>]*>([^<]+)<\/h2>[\s\S]{1,200}?(\d{4})/g;
+    // PoseidonHD usa Next.js - estructura: href="/pelicula/ID/slug" con _next/image
+    // Extraer por bloques de lista items
+    const blockRegex = /href="(\/pelicula\/[^"]+)"[\s\S]{1,1000}?Género[:\s]*([^\n<]{3,100})[\s\S]{1,200}?(\d{4})/g;
     let m;
-    while ((m = itemRegex.exec(html)) !== null) {
+    while ((m = blockRegex.exec(html)) !== null) {
       const link = `https://www.poseidonhd2.co${m[1]}`;
-      const poster = m[2].startsWith('http') ? m[2] : `https://www.poseidonhd2.co${m[2]}`;
-      const titulo = m[3].trim().replace(/\s+/g,' ');
-      const anio = m[4];
-      // Extraer género del bloque
-      const bloque = html.substring(m.index, m.index+600);
-      const genero = extractText(bloque, /Género[:\s]*([^\n<]{3,80})/);
-      peliculas.push({ titulo, anio, genero, poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
+      const genero = m[2].trim().replace(/\s+/g,' ');
+      const anio = m[3];
+      // Extraer título del slug
+      const slugMatch = m[1].match(/\/pelicula\/\d+\/([^"?]+)/);
+      const slug = slugMatch ? slugMatch[1] : '';
+      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+      // Extraer poster del bloque
+      const bloque = html.substring(Math.max(0, m.index-200), m.index+800);
+      const posterMatch = bloque.match(/url=([^&"]+\.(?:jpg|png|webp))/i);
+      let poster = '';
+      if (posterMatch) {
+        poster = decodeURIComponent(posterMatch[1]);
+        if (!poster.startsWith('http')) poster = 'https://www.poseidonhd2.co' + poster;
+      }
+      if (titulo.length > 1) {
+        peliculas.push({ titulo, anio, genero, poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
+      }
     }
     await sleep(800);
   }
