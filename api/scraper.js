@@ -1,14 +1,9 @@
-// Vercel Edge Function - Scraper automático de Cinetra
-// Fuentes: PoseidonHD, PelisJuanita, AnimeFLV, PelotaLibre
 export const config = { runtime: 'edge' };
 
 const SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
 const SECRET = 'cinetra-scraper-2024';
 
-// ============================================================
-// HELPERS
-// ============================================================
 async function dbUpsert(table, data, conflict) {
   if (!data || !data.length) return true;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`, {
@@ -47,88 +42,94 @@ async function fetchPage(url) {
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'es-AR,es;q=0.9',
         'Referer': new URL(url).origin,
-      },
-      redirect: 'follow'
+      }
     });
     if (!res.ok) return null;
     return await res.text();
   } catch { return null; }
 }
 
-function extractText(html, regex) {
-  const m = html.match(regex);
-  return m ? m[1].trim() : '';
-}
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ============================================================
-// POSEIDONHD - Películas, Series y Episodios
-// ============================================================
+function slugToTitle(slug) {
+  return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// POSEIDONHD
 async function scrapePoseidon() {
   const log = [];
   let peliculas = [], series = {};
 
-  // Películas - últimas 3 páginas
   for (let page = 1; page <= 3; page++) {
     const html = await fetchPage(`https://www.poseidonhd2.co/peliculas?page=${page}`);
     if (!html) continue;
 
-    // PoseidonHD: el HTML crudo tiene Unicode escapado \u003C etc
-    // Las URLs aparecen como /pelicula/ID/slug o como href="/pelicula/..."
-    // Decodificar el HTML primero
-    const htmlDecoded = html.replace(/\\u003C/g,'<').replace(/\\u003E/g,'>').replace(/\\u0022/g,'"').replace(/\\u002F/g,'/');
-    // Extraer URLs únicas de películas
-    const pelUrls = [...new Set((htmlDecoded.match(/\/pelicula\/\d+\/[a-z0-9\-]+/g) || []))];
-    for (const pelUrl of pelUrls) {
-      const link = `https://www.poseidonhd2.co${pelUrl}`;
-      // Extraer título del slug
+    // El HTML viene con unicode escapado en JSON - decodificar
+    // \u003C = < , \u003E = > , \u0022 = " , \u002F = /
+    const decoded = html
+      .replace(/\\u003C/gi, '<')
+      .replace(/\\u003E/gi, '>')
+      .replace(/\\u0022/gi, '"')
+      .replace(/\\u002F/gi, '/')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x2F;/g, '/');
+
+    // Usar el mismo método que funcionó en el debug: match directo
+    const urls = [...new Set(decoded.match(/\/pelicula\/\d+\/[a-z0-9-]+/g) || [])];
+    
+    // También intentar desde el HTML original sin decodificar
+    const urlsRaw = [...new Set(html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [])];
+    
+    // Combinar ambos resultados
+    const allUrls = [...new Set([...urls, ...urlsRaw])];
+
+    for (const pelUrl of allUrls) {
       const slugMatch = pelUrl.match(/\/pelicula\/\d+\/(.+)/);
       if (!slugMatch) continue;
-      const slug = slugMatch[1];
-      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      // Buscar el bloque de esta película en el HTML para extraer datos
-      const idx = htmlDecoded.indexOf(pelUrl);
-      if (idx === -1) continue;
-      const bloque = htmlDecoded.substring(Math.max(0,idx-500), idx+1000);
-      // Extraer año
-      const anioMatch = bloque.match(/>(20\d{2})</) || bloque.match(/(20\d{2})/);
-      const anio = anioMatch ? anioMatch[1] : '';
-      // Extraer poster de tmdb
-      const posterMatch = bloque.match(/https%3A%2F%2Fimage\.tmdb\.org[^"&\s]+/) ||
-                          bloque.match(/https:\/\/image\.tmdb\.org[^"\s&]+/);
+      const titulo = slugToTitle(slugMatch[1]);
+      if (titulo.length < 2 || titulo.length > 150) continue;
+      const link = `https://www.poseidonhd2.co${pelUrl}`;
+      
+      // Buscar poster en el bloque cercano a esta URL
+      const idx = html.indexOf(slugMatch[1]);
       let poster = '';
-      if (posterMatch) {
-        poster = decodeURIComponent(posterMatch[0]);
+      if (idx > -1) {
+        const bloque = html.substring(Math.max(0, idx-300), idx+500);
+        const tmdbMatch = bloque.match(/image\.tmdb\.org[^"&\s\\u003]+/);
+        if (tmdbMatch) poster = 'https://' + decodeURIComponent(tmdbMatch[0]);
       }
-      if (titulo.length > 1 && titulo.length < 150) {
-        peliculas.push({ titulo, anio, genero: '', poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
-      }
+      
+      // Año del slug o del bloque
+      const anioMatch = html.substring(Math.max(0, html.indexOf(slugMatch[1])-100), html.indexOf(slugMatch[1])+300).match(/20\d{2}/);
+      const anio = anioMatch ? anioMatch[0] : '';
+      
+      peliculas.push({ titulo, anio, genero: '', poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
     }
     await sleep(800);
   }
 
-  // Deduplicar por título
+  // Deduplicar
   const pelMap = {};
   peliculas.forEach(p => { if (!pelMap[p.titulo]) pelMap[p.titulo] = p; });
   peliculas = Object.values(pelMap);
   if (peliculas.length) await dbUpsert('peliculas', peliculas, 'titulo');
   log.push(`PoseidonHD: ${peliculas.length} películas`);
 
-  // Últimos episodios de series
+  // Series - episodios recientes
   const epsHtml = await fetchPage('https://www.poseidonhd2.co/episodios');
   if (epsHtml) {
-    const epRegex = /href="(\/serie\/(\d+)\/([^\/]+)\/temporada\/(\d+)\/episodio\/(\d+))"/g;
-    let em;
-    while ((em = epRegex.exec(epsHtml)) !== null) {
-      const url = `https://www.poseidonhd2.co${em[1]}`;
-      const slug = em[3];
-      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      const temp = parseInt(em[4]), ep = parseInt(em[5]);
-      if (!series[slug]) series[slug] = { titulo, plataforma:'PoseidonHD', episodios:{}, temporadas:0, ultimo_episodio:0, genero:'', sinopsis:'', poster_url:'', anio:'' };
+    const epUrls = [...new Set(epsHtml.match(/\/serie\/\d+\/[a-zA-Z0-9-]+\/temporada\/\d+\/episodio\/\d+/g) || [])];
+    for (const epUrl of epUrls) {
+      const m = epUrl.match(/\/serie\/(\d+)\/([^/]+)\/temporada\/(\d+)\/episodio\/(\d+)/);
+      if (!m) continue;
+      const slug = m[2], temp = parseInt(m[3]), ep = parseInt(m[4]);
+      const titulo = slugToTitle(slug);
+      const url = `https://www.poseidonhd2.co${epUrl}`;
+      if (!series[slug]) series[slug] = { titulo, plataforma: 'PoseidonHD', episodios: {}, temporadas: 0, ultimo_episodio: 0, genero: '', sinopsis: '', poster_url: '', anio: '' };
       if (!series[slug].episodios[temp]) series[slug].episodios[temp] = [];
-      const exists = series[slug].episodios[temp].find(e => e.ep===ep);
-      if (!exists) series[slug].episodios[temp].push({ ep, titulo:`Episodio ${ep}`, link:url });
+      if (!series[slug].episodios[temp].find(e => e.ep === ep)) {
+        series[slug].episodios[temp].push({ ep, titulo: `Episodio ${ep}`, link: url });
+      }
       series[slug].temporadas = Math.max(series[slug].temporadas, temp);
       series[slug].ultimo_episodio = Math.max(series[slug].ultimo_episodio, ep);
     }
@@ -140,102 +141,51 @@ async function scrapePoseidon() {
   return log;
 }
 
-// ============================================================
-// PELISJUANITA - Películas y Series
-// ============================================================
-async function scrapePelisJuanita() {
-  const log = [];
-  let peliculas = [], series = {};
-
-  // Películas recientes
-  for (let page = 1; page <= 3; page++) {
-    const html = await fetchPage(`https://pelisjuanita.com/movies/page/${page}/`);
-    if (!html) continue;
-    
-    // PelisJuanita usa WordPress con estructura típica
-    const itemRegex = /href="(https:\/\/pelisjuanita\.com\/movies\/[^"]+)"[\s\S]{1,400}?src="([^"]+)"[\s\S]{1,200}?<(?:h2|h3)[^>]*>([^<]+)<\/(?:h2|h3)>/g;
-    let m;
-    while ((m = itemRegex.exec(html)) !== null) {
-      const link = m[1];
-      const poster = m[2];
-      const titulo = m[3].trim().replace(/\s+/g,' ');
-      if (titulo.length < 2 || titulo.length > 100) continue;
-      peliculas.push({ titulo, anio: '', genero: '', poster_url: poster, link_reproduccion: link, plataforma: 'PelisJuanita', sinopsis: '', duracion: '' });
-    }
-    await sleep(600);
-  }
-
-  const pelMap = {};
-  peliculas.forEach(p => { if (!pelMap[p.titulo]) pelMap[p.titulo] = p; });
-  peliculas = Object.values(pelMap);
-  if (peliculas.length) await dbUpsert('peliculas', peliculas, 'titulo');
-  log.push(`PelisJuanita: ${peliculas.length} películas`);
-
-  // Series recientes
-  const serHtml = await fetchPage('https://pelisjuanita.com/series/');
-  if (serHtml) {
-    const serRegex = /href="(https:\/\/pelisjuanita\.com\/series\/[^"\/]+\/)"[\s\S]{1,400}?src="([^"]+)"[\s\S]{1,200}?<(?:h2|h3)[^>]*>([^<]+)<\/(?:h2|h3)>/g;
-    let sm;
-    const serList = [];
-    while ((sm = serRegex.exec(serHtml)) !== null) {
-      const titulo = sm[3].trim().replace(/\s+/g,' ');
-      if (titulo.length < 2 || titulo.length > 100) continue;
-      serList.push({ titulo, plataforma:'PelisJuanita', poster_url:sm[2], episodios:{}, temporadas:1, ultimo_episodio:0, genero:'', sinopsis:'', anio:'' });
-    }
-    if (serList.length) await dbUpsert('series', serList, 'titulo');
-    log.push(`PelisJuanita: ${serList.length} series`);
-  }
-
-  return log;
-}
-
-// ============================================================
-// ANIMEFLV - Anime
-// ============================================================
+// ANIMEFLV
 async function scrapeAnimeFLV() {
   const log = [];
   const animes = [];
 
-  // Anime actualizado recientemente
   for (let page = 1; page <= 2; page++) {
     const html = await fetchPage(`https://www3.animeflv.net/browse?order=updated&page=${page}`);
     if (!html) continue;
-
-    const animeRegex = /href="(\/anime\/[^"]+)"[\s\S]{1,300}?src="([^"]+)"[\s\S]{1,200}?<h3[^>]*>([^<]+)<\/h3>/g;
-    let m;
-    while ((m = animeRegex.exec(html)) !== null) {
-      const url = `https://www3.animeflv.net${m[1]}`;
-      const poster = m[2].startsWith('http') ? m[2] : `https://www3.animeflv.net${m[2]}`;
-      const titulo = m[3].trim().replace(/\s+/g,' ');
+    const urls = [...new Set(html.match(/\/anime\/[a-zA-Z0-9-]+/g) || [])];
+    for (const u of urls) {
+      const slug = u.replace('/anime/', '');
+      const titulo = slugToTitle(slug);
       if (titulo.length < 2) continue;
-      // Extraer géneros del bloque
-      const bloque = html.substring(m.index, m.index+500);
-      const genero = extractText(bloque, /class="Gens"[^>]*>([\s\S]{1,200}?)<\/[^>]+>/);
-      const generoLimpio = genero.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,100);
-      animes.push({ titulo, plataforma:'AnimeFLV', poster_url:poster, episodios:{}, temporadas:1, ultimo_episodio:0, genero:generoLimpio||'Anime', sinopsis:'', anio:'' });
+      const link = `https://www3.animeflv.net${u}`;
+      const idx = html.indexOf(u);
+      let poster = '';
+      if (idx > -1) {
+        const b = html.substring(Math.max(0,idx-200), idx+400);
+        const pm = b.match(/src="([^"]+\.(?:jpg|png|webp))"/);
+        if (pm) poster = pm[1].startsWith('http') ? pm[1] : `https://www3.animeflv.net${pm[1]}`;
+      }
+      animes.push({ titulo, plataforma: 'AnimeFLV', poster_url: poster, episodios: {}, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', anio: '' });
     }
     await sleep(700);
   }
 
-  // Últimos episodios
-  const epsHtml = await fetchPage('https://www3.animeflv.net/');
-  if (epsHtml) {
-    const epRegex = /href="(\/ver\/([^\/]+)-(\d+))"[^>]*>/g;
-    let em;
+  // Episodios recientes
+  const homeHtml = await fetchPage('https://www3.animeflv.net/');
+  if (homeHtml) {
+    const epUrls = [...new Set(homeHtml.match(/\/ver\/[a-zA-Z0-9-]+-\d+/g) || [])];
     const epMap = {};
-    while ((em = epRegex.exec(epsHtml)) !== null) {
-      const url = `https://www3.animeflv.net${em[1]}`;
-      const slug = em[2];
-      const epNum = parseInt(em[3]);
-      const titulo = slug.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      if (!epMap[slug]) epMap[slug] = { titulo, plataforma:'AnimeFLV', episodios:{1:[]}, temporadas:1, ultimo_episodio:0, genero:'Anime', sinopsis:'', poster_url:'', anio:'' };
-      const exists = epMap[slug].episodios[1].find(e=>e.ep===epNum);
-      if (!exists) epMap[slug].episodios[1].push({ ep:epNum, titulo:`Episodio ${epNum}`, link:url });
+    for (const u of epUrls) {
+      const m = u.match(/\/ver\/(.+)-(\d+)$/);
+      if (!m) continue;
+      const slug = m[1], epNum = parseInt(m[2]);
+      const titulo = slugToTitle(slug);
+      const link = `https://www3.animeflv.net${u}`;
+      if (!epMap[slug]) epMap[slug] = { titulo, plataforma: 'AnimeFLV', episodios: { 1: [] }, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', poster_url: '', anio: '' };
+      if (!epMap[slug].episodios[1].find(e => e.ep === epNum)) {
+        epMap[slug].episodios[1].push({ ep: epNum, titulo: `Episodio ${epNum}`, link });
+      }
       epMap[slug].ultimo_episodio = Math.max(epMap[slug].ultimo_episodio, epNum);
     }
-    // Merge con animes existentes
-    const existingTitles = new Set(animes.map(a=>a.titulo));
-    Object.values(epMap).forEach(a => { if (!existingTitles.has(a.titulo)) animes.push(a); });
+    const existing = new Set(animes.map(a => a.titulo));
+    Object.values(epMap).forEach(a => { if (!existing.has(a.titulo)) animes.push(a); });
   }
 
   const animeMap = {};
@@ -246,120 +196,87 @@ async function scrapeAnimeFLV() {
   return log;
 }
 
-// ============================================================
-// PELOTA LIBRE - Canales de fútbol
-// ============================================================
+// PELOTA LIBRE
 async function scrapePelotaLibre() {
   const log = [];
-  
-  // Canales fijos de PelotaLibre que ya conocemos
   const canales = [
-    { nombre:'TyC Sports', siglas:'TYC', categoria:'deportes', color:'#1a6e1a', logo_url:'', link_stream:'https://pelotalibretv.su/tyc-sports/' },
-    { nombre:'ESPN', siglas:'ESPN', categoria:'deportes', color:'#cc0000', logo_url:'', link_stream:'https://pelotalibretv.su/espn-1/' },
-    { nombre:'ESPN Premium', siglas:'ESPN+', categoria:'deportes', color:'#cc0000', logo_url:'', link_stream:'https://pelotalibretv.su/espn-premium/' },
-    { nombre:'Fox Sports', siglas:'FOX', categoria:'deportes', color:'#004080', logo_url:'', link_stream:'https://pelotalibretv.su/fox-sports/' },
-    { nombre:'TNT Sports', siglas:'TNT', categoria:'deportes', color:'#7b0000', logo_url:'', link_stream:'https://pelotalibretv.su/tnt-sports/' },
-    { nombre:'DirecTV Sports', siglas:'DTV', categoria:'deportes', color:'#0064ff', logo_url:'', link_stream:'https://pelotalibretv.su/directv-sports/' },
-    { nombre:'TV Pública', siglas:'TVP', categoria:'deportes', color:'#006400', logo_url:'', link_stream:'https://pelotalibretv.su/tv-publica/' },
-    { nombre:'DeporTV', siglas:'DEP', categoria:'deportes', color:'#1a237e', logo_url:'', link_stream:'https://pelotalibretv.su/deportv/' },
+    { nombre: 'TyC Sports', siglas: 'TYC', categoria: 'deportes', color: '#1a6e1a', logo_url: '', link_stream: 'https://pelotalibretv.su/tyc-sports/' },
+    { nombre: 'ESPN', siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-1/' },
+    { nombre: 'ESPN Premium', siglas: 'ESPN+', categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-premium/' },
+    { nombre: 'Fox Sports', siglas: 'FOX', categoria: 'deportes', color: '#004080', logo_url: '', link_stream: 'https://pelotalibretv.su/fox-sports/' },
+    { nombre: 'TNT Sports', siglas: 'TNT', categoria: 'deportes', color: '#7b0000', logo_url: '', link_stream: 'https://pelotalibretv.su/tnt-sports/' },
+    { nombre: 'DirecTV Sports', siglas: 'DTV', categoria: 'deportes', color: '#0064ff', logo_url: '', link_stream: 'https://pelotalibretv.su/directv-sports/' },
+    { nombre: 'TV Pública', siglas: 'TVP', categoria: 'deportes', color: '#006400', logo_url: '', link_stream: 'https://pelotalibretv.su/tv-publica/' },
+    { nombre: 'DeporTV', siglas: 'DEP', categoria: 'deportes', color: '#1a237e', logo_url: '', link_stream: 'https://pelotalibretv.su/deportv/' },
   ];
+  await dbUpsert('canales', canales, 'nombre');
 
-  // Scraping de la agenda de partidos
-  const agendaHtml = await fetchPage('https://pelotalibretv.su/agenda/');
+  // Partidos de la agenda
+  const html = await fetchPage('https://pelotalibretv.su/agenda/');
   const partidos = [];
-  
-  if (agendaHtml) {
-    // Buscar partidos en la agenda
-    const partidoRegex = /href="(https:\/\/pelotalibretv\.su\/[^"]+)"[^>]*>[\s\S]{1,300}?([A-Z][^<\n]{2,30})\s+vs\.?\s+([A-Z][^<\n]{2,30})/g;
-    let pm;
-    while ((pm = partidoRegex.exec(agendaHtml)) !== null) {
-      const link = pm[1];
-      const local = pm[2].trim().replace(/\s+/g,' ');
-      const visit = pm[3].trim().replace(/\s+/g,' ');
-      if (local.length < 2 || visit.length < 2) continue;
-      // Extraer hora
-      const bloque = agendaHtml.substring(pm.index, pm.index+400);
-      const hora = extractText(bloque, /(\d{1,2}:\d{2})/);
-      const fecha = new Date();
-      if (hora) {
-        const [h,min] = hora.split(':');
-        fecha.setHours(parseInt(h), parseInt(min), 0, 0);
-      }
+  if (html) {
+    const links = [...new Set(html.match(/https:\/\/pelotalibretv\.su\/[a-zA-Z0-9\-\/]+\//g) || [])];
+    const vsMatches = html.match(/([A-ZÁÉÍÓÚ][a-záéíóú\s]{2,25})\s+(?:vs\.?|VS\.?)\s+([A-ZÁÉÍÓÚ][a-záéíóú\s]{2,25})/g) || [];
+    vsMatches.slice(0, 20).forEach((vs, i) => {
+      const m = vs.match(/(.+?)\s+(?:vs\.?|VS\.?)\s+(.+)/);
+      if (!m) return;
+      const local = m[1].trim(), visit = m[2].trim();
+      if (local.length < 2 || visit.length < 2) return;
       partidos.push({
         equipo_local: local, equipo_visit: visit,
         sigla_local: local.substring(0,3).toUpperCase(),
         sigla_visit: visit.substring(0,3).toUpperCase(),
         color_local: '#1565c0', color_visit: '#c62828',
-        fecha: fecha.toISOString(),
-        en_vivo: false,
-        proveedores: ['tyc'],
-        link_tyc: link,
+        fecha: new Date().toISOString(),
+        en_vivo: false, proveedores: ['tyc'],
+        link_tyc: links[i] || 'https://pelotalibretv.su',
         liga: ''
       });
-    }
+    });
+    if (partidos.length) await dbInsert('partidos', partidos);
   }
 
-  if (canales.length) await dbUpsert('canales', canales, 'nombre');
-  if (partidos.length) await dbInsert('partidos', partidos);
   log.push(`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos`);
   return log;
 }
 
-// ============================================================
-// HANDLER PRINCIPAL
-// ============================================================
+// HANDLER
 export default async function handler(req) {
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret');
-  if (secret !== SECRET) return new Response(JSON.stringify({error:'No autorizado'}), {status:401});
+  if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
 
-  // DEBUG: ver HTML crudo de una página
+  // DEBUG
   const debug = url.searchParams.get('debug');
   if (debug) {
     const html = await fetchPage(debug);
-    if (!html) return new Response('No se pudo obtener la página', {status:500});
-    // Mostrar los primeros 3000 chars y buscar /pelicula/
-    const pelMatch = html.match(/\/pelicula\/[^"'\s]{5,60}/g);
-    const genMatch = html.match(/[Gg]énero[:\s]+([^\n<]{5,100})/g);
+    if (!html) return new Response('Error al obtener página', { status: 500 });
+    const urlsFound = html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [];
     return new Response(JSON.stringify({
       length: html.length,
-      first500: html.substring(0,500),
-      peliculas_encontradas: pelMatch ? pelMatch.slice(0,10) : [],
-      generos_encontrados: genMatch ? genMatch.slice(0,5) : [],
+      first300: html.substring(0, 300),
+      urls_peliculas: [...new Set(urlsFound)].slice(0, 10),
       tiene_pelicula: html.includes('/pelicula/'),
-      tiene_genero: html.includes('Género') || html.includes('género')
-    }), { headers: {'Content-Type':'application/json'} });
+      tiene_genero: html.includes('nero')
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
   const source = url.searchParams.get('source') || 'all';
   const logs = [];
-  const startTime = Date.now();
+  const t = Date.now();
 
   try {
-    if (source === 'all' || source === 'poseidon') {
-      const r = await scrapePoseidon();
-      logs.push(...r);
-    }
-    if (source === 'all' || source === 'juanita') {
-      const r = await scrapePelisJuanita();
-      logs.push(...r);
-    }
-    if (source === 'all' || source === 'anime') {
-      const r = await scrapeAnimeFLV();
-      logs.push(...r);
-    }
-    if (source === 'all' || source === 'futbol') {
-      const r = await scrapePelotaLibre();
-      logs.push(...r);
-    }
+    if (source === 'all' || source === 'poseidon') logs.push(...await scrapePoseidon());
+    if (source === 'all' || source === 'anime') logs.push(...await scrapeAnimeFLV());
+    if (source === 'all' || source === 'futbol') logs.push(...await scrapePelotaLibre());
   } catch (e) {
-    logs.push(`Error general: ${e.message}`);
+    logs.push(`Error: ${e.message}`);
   }
 
   return new Response(JSON.stringify({
     ok: true,
     timestamp: new Date().toISOString(),
-    duration: `${((Date.now()-startTime)/1000).toFixed(1)}s`,
+    duration: `${((Date.now()-t)/1000).toFixed(1)}s`,
     logs
   }), { headers: { 'Content-Type': 'application/json' } });
 }
