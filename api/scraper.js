@@ -74,24 +74,32 @@ async function scrapePoseidon() {
     const html = await fetchPage(`https://www.poseidonhd2.co/peliculas?page=${page}`);
     if (!html) continue;
 
-    // PoseidonHD - el HTML viene en formato markdown con esta estructura:
-    // * [AÑO![Titulo](poster)](https://poseidonhd2.co/pelicula/ID/slug)
-    //   Titulo
-    //   rating duracion AÑO
-    //   Género: X, Y
-    const pelRegex = /\* \[(\d{4})!\[([^\]]+)\]\(([^)]+)\)\s*\n?\s*([^\]]+)\]\(https:\/\/www\.poseidonhd2\.co(\/pelicula\/[^)]+)\)[\s\S]{1,400}?Género:\s*([^\n]+)/g;
-    let m;
-    while ((m = pelRegex.exec(html)) !== null) {
-      const anio = m[1];
-      const titulo = m[2].trim();
-      let poster = m[3].trim();
-      const link = `https://www.poseidonhd2.co${m[5]}`;
-      const genero = m[6].trim().replace(/\s+/g,' ');
-      // Decodificar poster de _next/image
-      const posterMatch = poster.match(/url=([^&]+)/);
-      if (posterMatch) poster = decodeURIComponent(posterMatch[1]);
+    // PoseidonHD: el HTML crudo tiene las URLs de películas en formato /pelicula/ID/slug
+    // Extraer URLs únicas de películas
+    const pelUrls = [...new Set(html.match(/\/pelicula\/\d+\/[a-z0-9\-]+/g) || [])];
+    for (const pelUrl of pelUrls) {
+      const link = `https://www.poseidonhd2.co${pelUrl}`;
+      // Extraer título del slug
+      const slugMatch = pelUrl.match(/\/pelicula\/\d+\/(.+)/);
+      if (!slugMatch) continue;
+      const slug = slugMatch[1];
+      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+      // Buscar el bloque de esta película en el HTML para extraer datos
+      const idx = html.indexOf(pelUrl);
+      if (idx === -1) continue;
+      const bloque = html.substring(Math.max(0,idx-500), idx+1000);
+      // Extraer año
+      const anioMatch = bloque.match(/>(20\d{2})</) || bloque.match(/(20\d{2})/);
+      const anio = anioMatch ? anioMatch[1] : '';
+      // Extraer poster de tmdb
+      const posterMatch = bloque.match(/https%3A%2F%2Fimage\.tmdb\.org[^"&\s]+/) ||
+                          bloque.match(/https:\/\/image\.tmdb\.org[^"\s&]+/);
+      let poster = '';
+      if (posterMatch) {
+        poster = decodeURIComponent(posterMatch[0]);
+      }
       if (titulo.length > 1 && titulo.length < 150) {
-        peliculas.push({ titulo, anio, genero, poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
+        peliculas.push({ titulo, anio, genero: '', poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
       }
     }
     await sleep(800);
