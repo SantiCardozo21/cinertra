@@ -302,6 +302,24 @@ export default async function handler(req) {
   const secret = url.searchParams.get('secret');
   if (secret !== SECRET) return new Response(JSON.stringify({error:'No autorizado'}), {status:401});
 
+  // DEBUG: ver HTML crudo de una página
+  const debug = url.searchParams.get('debug');
+  if (debug) {
+    const html = await fetchPage(debug);
+    if (!html) return new Response('No se pudo obtener la página', {status:500});
+    // Mostrar los primeros 3000 chars y buscar /pelicula/
+    const pelMatch = html.match(/\/pelicula\/[^"'\s]{5,60}/g);
+    const genMatch = html.match(/[Gg]énero[:\s]+([^\n<]{5,100})/g);
+    return new Response(JSON.stringify({
+      length: html.length,
+      first500: html.substring(0,500),
+      peliculas_encontradas: pelMatch ? pelMatch.slice(0,10) : [],
+      generos_encontrados: genMatch ? genMatch.slice(0,5) : [],
+      tiene_pelicula: html.includes('/pelicula/'),
+      tiene_genero: html.includes('Género') || html.includes('género')
+    }), { headers: {'Content-Type':'application/json'} });
+  }
+
   const source = url.searchParams.get('source') || 'all';
   const logs = [];
   const startTime = Date.now();
