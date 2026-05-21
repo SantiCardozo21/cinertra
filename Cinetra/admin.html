@@ -1488,7 +1488,226 @@ async function saveNuevosEps() {
   buildEfEpsList();
   await loadAll();
 }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinetra Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+:root {
+  --bg:#0a0a0a; --sidebar:#111111; --card:#161616; --accent:#4DA3FF;
+  --text:#fff; --text2:#ccc; --text3:#888; --border:#222;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+
+.topbar { height:55px; background:var(--sidebar); display:flex; align-items:center; padding:0 20px; gap:15px; }
+.logo { font-size:24px; font-weight:700; }
+.logo em { color:var(--accent); }
+
+.main { flex:1; overflow:auto; padding:20px; background:#0d0d0d; }
+
+.panel { display:none; }
+.panel.active { display:block; }
+
+.form-card { background:var(--card); padding:20px; border-radius:12px; margin:15px 0; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+.form-group { margin-bottom:12px; }
+.form-label { display:block; margin-bottom:5px; color:#aaa; font-size:13px; }
+.form-input, .form-select, .form-textarea { 
+  width:100%; padding:10px; background:#111; border:1px solid #333; border-radius:8px; color:white;
+}
+.form-textarea { min-height:90px; }
+
+.ep-list { max-height:450px; overflow-y:auto; background:#111; padding:10px; border-radius:8px; }
+.ep-item { background:#1a1a1a; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.btn { padding:10px 18px; border:none; border-radius:8px; cursor:pointer; font-weight:500; }
+.btn-save { background:var(--accent); color:black; }
+.btn-cancel { background:#333; color:white; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div style="background:#161616; padding:40px; border-radius:12px; width:340px;">
+    <h2 style="text-align:center;">Cinetra Admin</h2>
+    <input id="login-user" placeholder="Usuario" style="width:100%; padding:12px; margin:10px 0; background:#111; border:1px solid #333; border-radius:8px; color:white;">
+    <input id="login-pass" type="password" placeholder="Contraseña" style="width:100%; padding:12px; margin:10px 0; background:#111; border:1px solid #333; border-radius:8px; color:white;">
+    <button onclick="doLogin()" style="width:100%; padding:12px; background:var(--accent); color:black; border:none; border-radius:8px; font-weight:600;">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none; height:100vh; display:flex; flex-direction:column;">
+  <div class="topbar">
+    <div class="logo">Cine<em>tra</em> <span style="font-size:14px;">Admin</span></div>
+    <div onclick="doLogout()" style="color:#e53935; cursor:pointer;">Salir</div>
+  </div>
+
+  <div class="main">
+    <!-- Tus panels existentes van aquí -->
+    <div class="panel active" id="panel-series">
+      <h2>Series</h2>
+      <button onclick="openEditModal('series', null)" class="btn btn-save">+ Nueva Serie</button>
+      <!-- Agrega aquí tu tabla de series -->
+    </div>
+
+    <div class="panel" id="panel-anime">
+      <h2>Anime</h2>
+      <button onclick="openEditModal('anime', null)" class="btn btn-save">+ Nuevo Anime</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDICIÓN AVANZADO -->
+<div id="edit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#161616; width:100%; max-width:1000px; max-height:92vh; overflow:auto; border-radius:12px; padding:25px;">
+    <h2 id="modal-title">Editar</h2>
+
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Título *</label><input id="e-titulo" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Año</label><input id="e-anio" class="form-input" type="number"></div>
+      <div class="form-group"><label class="form-label">Póster URL</label><input id="e-poster" class="form-input"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Sinopsis</label>
+      <textarea id="e-sinopsis" class="form-textarea"></textarea>
+    </div>
+
+    <h3>Episodios</h3>
+    <div class="ep-list" id="ep-list"></div>
+
+    <div style="margin:15px 0;">
+      <button onclick="addEpisodeRow()" class="btn" style="background:#4CAF50;color:white;">+ Agregar Episodio</button>
+    </div>
+
+    <div style="text-align:right; margin-top:25px;">
+      <button onclick="closeEditModal()" class="btn btn-cancel">Cancelar</button>
+      <button onclick="saveChanges()" class="btn btn-save" style="margin-left:12px;">💾 Guardar Todo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== SUPABASE ====================
+const supabase = window.supabase.createClient(
+  'https://hrbzennsghftwjxtqeeg.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM'
+);
+
+let currentItem = null;
+let currentTable = null;
+
+function doLogin() {
+  // Cambia esto por tu usuario y contraseña real
+  const user = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  if (user && pass) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  }
+}
+
+function doLogout() {
+  location.reload();
+}
+
+// ==================== EDICIÓN ====================
+function openEditModal(table, item = null) {
+  currentTable = table;
+  currentItem = item ? JSON.parse(JSON.stringify(item)) : { episodios: {} };
+
+  document.getElementById('modal-title').textContent = item ? `Editar ${table}` : `Nueva ${table}`;
+
+  document.getElementById('e-titulo').value = currentItem.titulo || '';
+  document.getElementById('e-anio').value = currentItem.anio || '';
+  document.getElementById('e-poster').value = currentItem.poster_url || '';
+  document.getElementById('e-sinopsis').value = currentItem.sinopsis || '';
+
+  renderEpisodes();
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+}
+
+function renderEpisodes() {
+  const container = document.getElementById('ep-list');
+  let html = '';
+  const eps = currentItem.episodios || {};
+
+  Object.keys(eps).sort((a,b)=>a-b).forEach(temp => {
+    html += `<strong>Temporada ${temp}</strong><br>`;
+    eps[temp].forEach((ep, i) => {
+      html += `
+        <div class="ep-item">
+          <span>Ep ${ep.ep}</span>
+          <input value="${ep.titulo||''}" placeholder="Título" onchange="currentItem.episodios[${temp}][${i}].titulo = this.value">
+          <input value="${ep.link||''}" placeholder="Link" onchange="currentItem.episodios[${temp}][${i}].link = this.value" style="flex:1;">
+          <button onclick="deleteEpisode(${temp},${i})" style="background:#e53935;color:white;">Eliminar</button>
+        </div>`;
+    });
+  });
+
+  container.innerHTML = html || '<p style="color:#666;text-align:center;padding:30px;">Sin episodios. Agrega uno.</p>';
+}
+
+function addEpisodeRow() {
+  if (!currentItem.episodios) currentItem.episodios = {};
+  const temps = Object.keys(currentItem.episodios).map(Number);
+  const lastTemp = temps.length ? Math.max(...temps) : 1;
+  if (!currentItem.episodios[lastTemp]) currentItem.episodios[lastTemp] = [];
+
+  currentItem.episodios[lastTemp].push({
+    ep: currentItem.episodios[lastTemp].length + 1,
+    titulo: "",
+    link: ""
+  });
+  renderEpisodes();
+}
+
+function deleteEpisode(temp, index) {
+  if (confirm("Eliminar episodio?")) {
+    currentItem.episodios[temp].splice(index, 1);
+    if (currentItem.episodios[temp].length === 0) delete currentItem.episodios[temp];
+    renderEpisodes();
+  }
+}
+
+async function saveChanges() {
+  if (!document.getElementById('e-titulo').value) return alert("El título es obligatorio");
+
+  const payload = {
+    titulo: document.getElementById('e-titulo').value,
+    anio: parseInt(document.getElementById('e-anio').value) || null,
+    poster_url: document.getElementById('e-poster').value,
+    sinopsis: document.getElementById('e-sinopsis').value,
+    episodios: currentItem.episodios || {}
+  };
+
+  let result;
+  if (currentItem.id) {
+    result = await supabase.from(currentTable).update(payload).eq('id', currentItem.id);
+  } else {
+    result = await supabase.from(currentTable).insert(payload);
+  }
+
+  if (result.error) alert("Error: " + result.error.message);
+  else {
+    alert("✅ Guardado correctamente");
+    closeEditModal();
+    location.reload();
+  }
+}
 </script>
 </body>
+</html>
 </html>
