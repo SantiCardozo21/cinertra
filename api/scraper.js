@@ -74,27 +74,23 @@ async function scrapePoseidon() {
     const html = await fetchPage(`https://www.poseidonhd2.co/peliculas?page=${page}`);
     if (!html) continue;
 
-    // PoseidonHD usa Next.js - estructura: href="/pelicula/ID/slug" con _next/image
-    // Extraer por bloques de lista items
-    const blockRegex = /href="(\/pelicula\/[^"]+)"[\s\S]{1,1000}?Género[:\s]*([^\n<]{3,100})[\s\S]{1,200}?(\d{4})/g;
+    // PoseidonHD - el HTML viene en formato markdown con esta estructura:
+    // * [AÑO![Titulo](poster)](https://poseidonhd2.co/pelicula/ID/slug)
+    //   Titulo
+    //   rating duracion AÑO
+    //   Género: X, Y
+    const pelRegex = /\* \[(\d{4})!\[([^\]]+)\]\(([^)]+)\)\s*\n?\s*([^\]]+)\]\(https:\/\/www\.poseidonhd2\.co(\/pelicula\/[^)]+)\)[\s\S]{1,400}?Género:\s*([^\n]+)/g;
     let m;
-    while ((m = blockRegex.exec(html)) !== null) {
-      const link = `https://www.poseidonhd2.co${m[1]}`;
-      const genero = m[2].trim().replace(/\s+/g,' ');
-      const anio = m[3];
-      // Extraer título del slug
-      const slugMatch = m[1].match(/\/pelicula\/\d+\/([^"?]+)/);
-      const slug = slugMatch ? slugMatch[1] : '';
-      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      // Extraer poster del bloque
-      const bloque = html.substring(Math.max(0, m.index-200), m.index+800);
-      const posterMatch = bloque.match(/url=([^&"]+\.(?:jpg|png|webp))/i);
-      let poster = '';
-      if (posterMatch) {
-        poster = decodeURIComponent(posterMatch[1]);
-        if (!poster.startsWith('http')) poster = 'https://www.poseidonhd2.co' + poster;
-      }
-      if (titulo.length > 1) {
+    while ((m = pelRegex.exec(html)) !== null) {
+      const anio = m[1];
+      const titulo = m[2].trim();
+      let poster = m[3].trim();
+      const link = `https://www.poseidonhd2.co${m[5]}`;
+      const genero = m[6].trim().replace(/\s+/g,' ');
+      // Decodificar poster de _next/image
+      const posterMatch = poster.match(/url=([^&]+)/);
+      if (posterMatch) poster = decodeURIComponent(posterMatch[1]);
+      if (titulo.length > 1 && titulo.length < 150) {
         peliculas.push({ titulo, anio, genero, poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD', sinopsis: '', duracion: '' });
       }
     }
