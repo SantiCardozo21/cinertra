@@ -806,6 +806,17 @@ function showApp(code, dias) {
     if (dias <= 0) { localStorage.removeItem('cinetra_code'); return; }
     showApp(code, dias);
   });
+
+  // Fix para Android TV - capturar teclas en el input de código
+  document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('sub-input');
+    if (input) {
+      input.addEventListener('keydown', function(e) {
+        e.stopPropagation();
+      });
+    }
+  });
+
 })();
 
 // NAVEGACIÓN
