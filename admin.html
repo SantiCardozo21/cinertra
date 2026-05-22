@@ -422,22 +422,12 @@ tr:hover td{background:#111;}
           <div class="form-group"><label class="form-label">¿En vivo ahora?</label>
             <select class="form-select" id="fpa-vivo"><option value="false">No</option><option value="true">Sí</option></select>
           </div>
-          <div class="form-group full"><label class="form-label">Proveedores disponibles</label>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <label class="genre-check"><input type="checkbox" id="ppa-disney"> Disney+</label>
-              <label class="genre-check"><input type="checkbox" id="ppa-espn"> ESPN</label>
-              <label class="genre-check"><input type="checkbox" id="ppa-tnt"> TNT Sports</label>
-              <label class="genre-check"><input type="checkbox" id="ppa-fox"> Fox Sports</label>
-              <label class="genre-check"><input type="checkbox" id="ppa-tyc"> TyC Sports</label>
-              <label class="genre-check"><input type="checkbox" id="ppa-dsports"> DSports</label>
-            </div>
+          <div class="form-group full">
+            <label class="form-label">Canales donde se transmite</label>
+            <p style="font-size:11px;color:var(--text4);margin-bottom:8px;">Agregá cada canal con su nombre y link. Podés poner cualquier canal.</p>
+            <div id="fpa-canales-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+            <div class="add-ep-row-btn" onclick="addCanalRow('fpa-canales-rows')"><i class="ti ti-plus"></i> Agregar canal</div>
           </div>
-          <div class="form-group full"><label class="form-label">Link Disney+</label><input class="form-input" id="fpa-link-disney" placeholder="https://..."></div>
-          <div class="form-group full"><label class="form-label">Link ESPN</label><input class="form-input" id="fpa-link-espn" placeholder="https://..."></div>
-          <div class="form-group full"><label class="form-label">Link TNT Sports</label><input class="form-input" id="fpa-link-tnt" placeholder="https://..."></div>
-          <div class="form-group full"><label class="form-label">Link Fox Sports</label><input class="form-input" id="fpa-link-fox" placeholder="https://..."></div>
-          <div class="form-group full"><label class="form-label">Link TyC Sports</label><input class="form-input" id="fpa-link-tyc" placeholder="https://..."></div>
-          <div class="form-group full"><label class="form-label">Link DSports</label><input class="form-input" id="fpa-link-dsports" placeholder="https://..."></div>
           <div class="form-btns full"><button class="btn-cancel" onclick="resetForm()">Limpiar</button><button class="btn-save" onclick="savePartido()"><i class="ti ti-check"></i> Guardar partido</button></div>
         </div>
       </div>
@@ -523,7 +513,7 @@ tr:hover td{background:#111;}
 
 <!-- MODAL EDITAR PARTIDO -->
 <div class="modal-bg" id="modal-edit-partido-bg">
-  <div class="modal">
+  <div class="modal" style="max-width:600px;">
     <h3><i class="ti ti-pencil"></i> Editar partido</h3>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Equipo local</label><input class="form-input" id="epa-local"></div>
@@ -532,9 +522,12 @@ tr:hover td{background:#111;}
       <div class="form-group"><label class="form-label">En vivo</label>
         <select class="form-select" id="epa-vivo"><option value="false">No</option><option value="true">Sí</option></select>
       </div>
-      <div class="form-group"><label class="form-label">Goles local</label><input class="form-input" id="epa-goles-l" type="number" value="0"></div>
-      <div class="form-group"><label class="form-label">Goles visitante</label><input class="form-input" id="epa-goles-v" type="number" value="0"></div>
-      <div class="form-group"><label class="form-label">Minuto</label><input class="form-input" id="epa-minuto" type="number" value="0"></div>
+      <div class="form-group full">
+        <label class="form-label">Canales donde se transmite</label>
+        <p style="font-size:11px;color:var(--text4);margin-bottom:8px;">Agregá cada canal con su nombre y link.</p>
+        <div id="epa-canales-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+        <div class="add-ep-row-btn" onclick="addCanalRow('epa-canales-rows')"><i class="ti ti-plus"></i> Agregar canal</div>
+      </div>
     </div>
     <div class="modal-btns" style="margin-top:8px;">
       <button class="modal-cancel" onclick="closeModal('modal-edit-partido-bg')">Cancelar</button>
@@ -860,23 +853,47 @@ async function saveCanal() {
   toast('Canal guardado ✓','ok'); resetForm(); await loadAll();
 }
 
+function addCanalRow(containerId, nombre, link) {
+  const div = document.createElement('div');
+  div.className = 'ep-row';
+  div.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1;">
+      <div class="ep-col-label">Nombre del canal</div>
+      <input class="form-input canal-nombre" placeholder="Ej: TyC Sports" value="${nombre||''}">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;flex:2;">
+      <div class="ep-col-label">Link</div>
+      <input class="form-input canal-link" placeholder="https://pelotalibretv.su/tyc-sports/" value="${link||''}">
+    </div>
+    <div class="ep-remove" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></div>`;
+  document.getElementById(containerId).appendChild(div);
+}
+
+function getCanalRows(containerId) {
+  const rows = document.querySelectorAll('#'+containerId+' .ep-row');
+  const canales = [];
+  rows.forEach(row => {
+    const nombre = row.querySelector('.canal-nombre').value.trim();
+    const link = row.querySelector('.canal-link').value.trim();
+    if (nombre && link) canales.push({ nombre, link });
+  });
+  return canales;
+}
+
 async function savePartido() {
   const local = document.getElementById('fpa-local').value.trim();
   const visit = document.getElementById('fpa-visit').value.trim();
   if (!local || !visit) return toast('Ambos equipos son obligatorios','err');
-  const provs = ['disney','espn','tnt','fox','tyc','dsports'].filter(p => document.getElementById('ppa-'+p).checked);
-  const links = {};
-  provs.forEach(p => { links['link_'+p] = document.getElementById('fpa-link-'+p).value.trim(); });
+  const canales = getCanalRows('fpa-canales-rows');
   const { error } = await db.from('partidos').insert({
     equipo_local:local, equipo_visit:visit,
     sigla_local: document.getElementById('fpa-sigla-l').value.toUpperCase(),
     sigla_visit: document.getElementById('fpa-sigla-v').value.toUpperCase(),
     color_local: document.getElementById('fpa-color-l').value,
     color_visit: document.getElementById('fpa-color-v').value,
-    liga: document.getElementById('fpa-liga').value,
     fecha: document.getElementById('fpa-fecha').value,
     en_vivo: document.getElementById('fpa-vivo').value === 'true',
-    proveedores: provs, ...links
+    canales: canales
   });
   if (error) return toast('Error: '+error.message,'err');
   toast('Partido guardado ✓','ok'); resetForm(); await loadAll();
@@ -988,20 +1005,25 @@ function openEditPartido(p) {
   document.getElementById('epa-visit').value = p.equipo_visit||'';
   document.getElementById('epa-fecha').value = p.fecha?p.fecha.substring(0,16):'';
   document.getElementById('epa-vivo').value = p.en_vivo?'true':'false';
-  document.getElementById('epa-goles-l').value = p.goles_local||0;
-  document.getElementById('epa-goles-v').value = p.goles_visit||0;
-  document.getElementById('epa-minuto').value = p.minuto||0;
+  // Cargar canales existentes
+  const container = document.getElementById('epa-canales-rows');
+  container.innerHTML = '';
+  const canales = p.canales || [];
+  if (canales.length) {
+    canales.forEach(c => addCanalRow('epa-canales-rows', c.nombre, c.link));
+  } else {
+    addCanalRow('epa-canales-rows');
+  }
   openModal('modal-edit-partido-bg');
 }
 async function saveEditPartido() {
+  const canales = getCanalRows('epa-canales-rows');
   const { error } = await db.from('partidos').update({
     equipo_local: document.getElementById('epa-local').value,
     equipo_visit: document.getElementById('epa-visit').value,
     fecha: document.getElementById('epa-fecha').value,
     en_vivo: document.getElementById('epa-vivo').value === 'true',
-    goles_local: parseInt(document.getElementById('epa-goles-l').value)||0,
-    goles_visit: parseInt(document.getElementById('epa-goles-v').value)||0,
-    minuto: parseInt(document.getElementById('epa-minuto').value)||0,
+    canales: canales
   }).eq('id', _editPartidoId);
   if (error) return toast('Error: '+error.message,'err');
   toast('Partido actualizado ✓','ok'); closeModal('modal-edit-partido-bg'); await loadAll();
