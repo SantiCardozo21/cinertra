@@ -1016,7 +1016,7 @@ function matchBigHTML(p) {
   var hora = fhora(p.fecha);
   var ahora = new Date();
   var diff = fecha - ahora;
-  var isSoon = !isLive && diff > 0 && diff < 30*60*1000; // en breve = menos de 30 min
+  var isSoon = !isLive && diff > 0 && diff < 30*60*1000;
 
   var statusBadge = isLive
     ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>'
@@ -1024,15 +1024,12 @@ function matchBigHTML(p) {
       ? '<div class="match-status-badge soon">⚡ EN BREVE</div>'
       : '<div class="match-status-badge next">📅 PRÓXIMO</div>';
 
-  var centerContent = isLive
-    ? '<div class="match-score-big">'+(p.goles_local||0)+' - '+(p.goles_visit||0)+'</div><div class="match-min">● '+(p.minuto||0)+"'</div>"
-    : '<div class="match-vs">VS</div>';
-
-  var provs = (p.proveedores||[]).map(function(pr){
-    return '<a class="prov-tag p-'+pr+'" href="'+(p['link_'+pr]||'#')+'" target="_blank">'+pname(pr)+'</a>';
+  // Canales dinámicos desde columna canales[]
+  var canales = (p.canales || []).map(function(c) {
+    return '<a class="prov-tag" href="'+c.link+'" target="_blank" tabindex="0">📺 '+c.nombre+'</a>';
   }).join('');
 
-  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'">'
+  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" tabindex="0">'
     +'<div class="match-status-bar">'
       +statusBadge
       +'<div class="match-hora">'+(isLive?'● LIVE':hora)+'</div>'
@@ -1043,13 +1040,13 @@ function matchBigHTML(p) {
         +'<div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div>'
         +'<div class="team-name-big">'+p.equipo_local+'</div>'
       +'</div>'
-      +'<div style="display:flex;flex-direction:column;align-items:center;">'+centerContent+'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;"><div class="match-vs">VS</div></div>'
       +'<div class="match-team">'
         +'<div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+'">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div>'
         +'<div class="team-name-big">'+p.equipo_visit+'</div>'
       +'</div>'
     +'</div>'
-    +(provs?'<div class="match-provs">'+provs+'</div>':'')
+    +(canales?'<div class="match-provs">'+canales+'</div>':'')
     +'</div>';
 }
 
@@ -1060,7 +1057,6 @@ function renderFutbol(filtro) {
   if (filtro === 'live') list = list.filter(function(p){ return p.en_vivo; });
   else if (filtro === 'soon') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)<30*60*1000 && (d-ahora)>0; });
   else if (filtro === 'next') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)>=30*60*1000; });
-
   if (!list.length) {
     document.getElementById('futbol-content').innerHTML = '<div class="empty">Sin partidos en esta categoría</div>';
     return;
@@ -1073,7 +1069,7 @@ function filterFutbolTab(filtro, el) {
   el.classList.add('active');
   renderFutbol(filtro);
 }
-function pname(p) { return {disney:'Disney+',espn:'ESPN',tnt:'TNT Sports',fox:'Fox Sports',tyc:'TyC Sports',dsports:'DSports'}[p]||p; }
+
 function fhora(f) { try { return new Date(f).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs'; } catch(e){ return '—'; } }
 
 // PLATAFORMAS / CATEGORÍAS
