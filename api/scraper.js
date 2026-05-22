@@ -59,69 +59,42 @@ function extractNextData(html) {
   } catch { return null; }
 }
 
-// Scrapea UNA SOLA página del listado y guarda las películas
-// sin entrar a cada película individualmente
+// Scrapea UNA SOLA página del listado usando __NEXT_DATA__
+// El listado ya trae título, póster, géneros, sinopsis, año completos
 async function scrapePeliculasFromListado(page) {
   const html = await fetchPage(`${BASE}/peliculas?page=${page}`);
   if (!html) return [];
 
   const data = extractNextData(html);
+  if (!data) return [];
+
+  // data.movies tiene las películas de esa página con todos los datos
+  // data.pages tiene el total de páginas (771!)
+  const movies = data.movies || [];
   const peliculas = [];
+  const seen = new Set();
 
-  // El listado también tiene __NEXT_DATA__ con las películas!
-  if (data) {
-    // Combinar todas las listas de películas disponibles
-    const allMovies = [
-      ...(data.movies || []),
-      ...(data.latestMovies || []),
-      ...(data.otherMovies || []),
-      ...(data.topMoviesDay || []),
-      ...(data.topMoviesWeek || []),
-    ];
+  for (const m of movies) {
+    const titulo = m.titles?.name;
+    if (!titulo || seen.has(titulo)) continue;
+    seen.add(titulo);
 
-    const seen = new Set();
-    for (const m of allMovies) {
-      const titulo = m.titles?.name;
-      if (!titulo || seen.has(titulo)) continue;
-      seen.add(titulo);
+    const slug = m.url?.slug || '';
+    const link = slug ? `${BASE}/${slug}` : BASE;
+    const anio = m.releaseDate ? new Date(m.releaseDate).getFullYear().toString() : '';
+    const genero = (m.genres || []).map(g => g.name).join(', ');
+    const duracion = m.runtime ? `${m.runtime} min` : '';
 
-      const slug = m.url?.slug || '';
-      const link = slug ? `${BASE}/${slug}` : BASE;
-      const anio = m.releaseDate ? new Date(m.releaseDate).getFullYear().toString() : '';
-      const genero = (m.genres || []).map(g => g.name).join(', ');
-      const duracion = m.runtime ? `${m.runtime} min` : '';
-
-      peliculas.push({
-        titulo,
-        anio,
-        genero,
-        duracion,
-        sinopsis: m.overview || '',
-        poster_url: m.images?.poster || '',
-        link_reproduccion: link,
-        plataforma: 'PoseidonHD'
-      });
-    }
-  }
-
-  // Fallback: extraer URLs del HTML y sacar info básica
-  if (!peliculas.length) {
-    const urls = [...new Set(html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [])];
-    for (const u of urls) {
-      const slugMatch = u.match(/\/pelicula\/\d+\/(.+)/);
-      if (!slugMatch) continue;
-      const titulo = slugMatch[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const link = `${BASE}${u}`;
-      // Intentar sacar poster del HTML
-      const idx = html.indexOf(slugMatch[1]);
-      let poster = '';
-      if (idx > -1) {
-        const b = html.substring(Math.max(0, idx - 400), idx + 200);
-        const pm = b.match(/https%3A%2F%2Fimage\.tmdb\.org[^"&\s]+/);
-        if (pm) poster = decodeURIComponent(pm[0]);
-      }
-      peliculas.push({ titulo, anio: '', genero: '', duracion: '', sinopsis: '', poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD' });
-    }
+    peliculas.push({
+      titulo,
+      anio,
+      genero,
+      duracion,
+      sinopsis: m.overview || '',
+      poster_url: m.images?.poster || '',
+      link_reproduccion: link,
+      plataforma: 'PoseidonHD'
+    });
   }
 
   return peliculas;
