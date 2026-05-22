@@ -792,10 +792,26 @@ function showApp(code, dias) {
 }
 
 // Verificar sesión guardada al iniciar
+// Fix para Android TV - mantener foco en el input de código
+(function() {
+  var input = document.getElementById('sub-input');
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', function() {
+      var screen = document.getElementById('sub-screen');
+      if (screen && !screen.classList.contains('hidden')) {
+        setTimeout(function() { input.focus(); }, 50);
+      }
+    });
+  }
+})();
+
+// Verificar sesión guardada al iniciar
 (function init() {
   var code = localStorage.getItem('cinetra_code');
   if (!code) return;
-  // Verificar en Supabase que el código sigue vigente
   db.from('codigos').select('fecha_vencimiento,device_id').eq('codigo', code).single().then(function(res) {
     if (res.error || !res.data) { localStorage.removeItem('cinetra_code'); return; }
     var deviceId = getDeviceId();
@@ -806,17 +822,6 @@ function showApp(code, dias) {
     if (dias <= 0) { localStorage.removeItem('cinetra_code'); return; }
     showApp(code, dias);
   });
-
-  // Fix para Android TV - capturar teclas en el input de código
-  document.addEventListener('DOMContentLoaded', function() {
-    var input = document.getElementById('sub-input');
-    if (input) {
-      input.addEventListener('keydown', function(e) {
-        e.stopPropagation();
-      });
-    }
-  });
-
 })();
 
 // NAVEGACIÓN
