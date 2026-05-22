@@ -1081,6 +1081,26 @@ function openPartidoModal(id) {
   modal.classList.add('open');
 }
 
+function renderFutbol(filtro) {
+  filtro = filtro || 'todos';
+  var ahora = new Date();
+  var list = state.partidos;
+  if (filtro === 'live') list = list.filter(function(p){ return p.en_vivo; });
+  else if (filtro === 'soon') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)<30*60*1000 && (d-ahora)>0; });
+  else if (filtro === 'next') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)>=30*60*1000; });
+  if (!list.length) {
+    document.getElementById('futbol-content').innerHTML = '<div class="empty">Sin partidos en esta categoría</div>';
+    return;
+  }
+  document.getElementById('futbol-content').innerHTML = '<div class="futbol-grid">'+list.map(matchBigHTML).join('')+'</div>';
+}
+
+function filterFutbolTab(filtro, el) {
+  document.querySelectorAll('#futbol-tabs .tab').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  renderFutbol(filtro);
+}
+
 function fhora(f) { try { return new Date(f).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs'; } catch(e){ return '—'; } }
 
 // PLATAFORMAS / CATEGORÍAS
