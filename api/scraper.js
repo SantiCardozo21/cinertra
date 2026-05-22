@@ -217,15 +217,19 @@ async function scrapePelotaLibre() {
       const m = vs.match(/(.+?)\s+(?:vs\.?|VS\.?)\s+(.+)/);
       if (!m) return;
       const local = m[1].trim(), visit = m[2].trim();
-      if (local.length < 2 || visit.length < 2) return;
-      partidos.push({
-        equipo_local: local, equipo_visit: visit,
-        sigla_local: local.substring(0, 3).toUpperCase(),
-        sigla_visit: visit.substring(0, 3).toUpperCase(),
-        color_local: '#1565c0', color_visit: '#c62828',
-        fecha: new Date().toISOString(), en_vivo: false,
-        proveedores: ['tyc'], link_tyc: links[i] || 'https://pelotalibretv.su', liga: ''
-      });
+        if (local.length < 2 || visit.length < 2) return;
+        partidos.push({
+          equipo_local: local,
+          equipo_visit: visit,
+          sigla_local: local.substring(0, 3).toUpperCase(),
+          sigla_visit: visit.substring(0, 3).toUpperCase(),
+          color_local: '#1565c0',
+          color_visit: '#c62828',
+          fecha: new Date().toISOString(),
+          en_vivo: false,
+          proveedores: ['tyc'],
+          link_tyc: links[i] || 'https://pelotalibretv.su'
+        });
     });
     if (partidos.length) await dbInsert('partidos', partidos);
   }
