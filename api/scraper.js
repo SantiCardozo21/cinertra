@@ -60,9 +60,10 @@ function extractNextData(html) {
 }
 
 // Scrapea UNA SOLA página del listado usando __NEXT_DATA__
-// El listado ya trae título, póster, géneros, sinopsis, año completos
-async function scrapePeliculasFromListado(page) {
-  const html = await fetchPage(`${BASE}/peliculas?page=${page}`);
+// Soporta scraping por género: /genero/accion, /genero/terror, etc.
+async function scrapePeliculasFromListado(page, genero) {
+  const path = genero ? `/genero/${genero}?page=${page}` : `/peliculas?page=${page}`;
+  const html = await fetchPage(`${BASE}${path}`);
   if (!html) return [];
 
   const data = extractNextData(html);
@@ -253,12 +254,13 @@ export default async function handler(req) {
   }
 
   try {
-    // PELÍCULAS: scrapear página por página sin entrar a cada película
+    // PELÍCULAS: scrapear por género y página
     if (source === 'all' || source === 'peliculas' || source === 'poseidon') {
       const page = parseInt(url.searchParams.get('page') || '1');
-      const peliculas = await scrapePeliculasFromListado(page);
+      const genero = url.searchParams.get('genero') || '';
+      const peliculas = await scrapePeliculasFromListado(page, genero);
       if (peliculas.length) await dbUpsert('peliculas', peliculas, 'titulo');
-      logs.push(`Películas página ${page}: ${peliculas.length} guardadas`);
+      logs.push(`Películas ${genero||'recientes'} pág ${page}: ${peliculas.length} guardadas`);
     }
 
     // SERIES: scrapear de a una serie por request
