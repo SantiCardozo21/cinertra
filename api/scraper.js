@@ -5,9 +5,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SECRET = 'cinetra-scraper-2024';
 const BASE = 'https://www.poseidonhd2.co';
 
-// ============================================================
-// SUPABASE
-// ============================================================
 async function dbUpsert(table, data, conflict) {
   if (!data?.length) return true;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`, {
@@ -38,9 +35,6 @@ async function dbInsert(table, data) {
   return res.ok;
 }
 
-// ============================================================
-// FETCH
-// ============================================================
 async function fetchPage(url) {
   try {
     const res = await fetch(url, {
@@ -56,7 +50,6 @@ async function fetchPage(url) {
   } catch { return null; }
 }
 
-// Extraer __NEXT_DATA__ JSON del HTML de PoseidonHD
 function extractNextData(html) {
   if (!html) return null;
   try {
@@ -66,50 +59,36 @@ function extractNextData(html) {
   } catch { return null; }
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// Scrapea UNA SOLA página del listado y guarda las películas
+// sin entrar a cada película individualmente
+async function scrapePeliculasFromListado(page) {
+  const html = await fetchPage(`${BASE}/peliculas?page=${page}`);
+  if (!html) return [];
 
-// ============================================================
-// POSEIDONHD - PELÍCULAS
-// Obtiene las URLs de la página de listado, luego entra a cada
-// una para extraer datos completos via __NEXT_DATA__
-// ============================================================
-async function scrapePoseidonPeliculas() {
-  const log = [];
+  const data = extractNextData(html);
   const peliculas = [];
-  const seen = new Set();
 
-  for (let page = 1; page <= 5; page++) {
-    const html = await fetchPage(`${BASE}/peliculas?page=${page}`);
-    if (!html) continue;
+  // El listado también tiene __NEXT_DATA__ con las películas!
+  if (data) {
+    // Combinar todas las listas de películas disponibles
+    const allMovies = [
+      ...(data.movies || []),
+      ...(data.latestMovies || []),
+      ...(data.otherMovies || []),
+      ...(data.topMoviesDay || []),
+      ...(data.topMoviesWeek || []),
+    ];
 
-    // Extraer URLs de películas del listado
-    const urls = [...new Set(html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [])];
-    if (!urls.length) break;
+    const seen = new Set();
+    for (const m of allMovies) {
+      const titulo = m.titles?.name;
+      if (!titulo || seen.has(titulo)) continue;
+      seen.add(titulo);
 
-    for (const pelUrl of urls) {
-      if (seen.has(pelUrl)) continue;
-      seen.add(pelUrl);
-
-      const pelHtml = await fetchPage(`${BASE}${pelUrl}`);
-      const data = extractNextData(pelHtml);
-      if (!data?.thisMovie) continue;
-
-      const m = data.thisMovie;
-      const titulo = m.titles?.name || '';
-      if (!titulo) continue;
-
-      // Link de reproducción: primer video latino o inglés
-      const videos = m.videos?.latino?.length ? m.videos.latino :
-                     m.videos?.english?.length ? m.videos.english : [];
-      const link = videos[0]?.result || `${BASE}${pelUrl}`;
-
-      // Géneros
-      const genero = (m.genres || []).map(g => g.name).join(', ');
-
-      // Año
+      const slug = m.url?.slug || '';
+      const link = slug ? `${BASE}/${slug}` : BASE;
       const anio = m.releaseDate ? new Date(m.releaseDate).getFullYear().toString() : '';
-
-      // Duración
+      const genero = (m.genres || []).map(g => g.name).join(', ');
       const duracion = m.runtime ? `${m.runtime} min` : '';
 
       peliculas.push({
@@ -122,141 +101,99 @@ async function scrapePoseidonPeliculas() {
         link_reproduccion: link,
         plataforma: 'PoseidonHD'
       });
-
-      await sleep(300);
     }
-    await sleep(500);
   }
 
-  if (peliculas.length) await dbUpsert('peliculas', peliculas, 'titulo');
-  log.push(`PoseidonHD: ${peliculas.length} películas`);
-  return log;
-}
-
-// ============================================================
-// POSEIDONHD - SERIES
-// Obtiene URLs del listado de episodios recientes, luego entra
-// a la página de cada serie para obtener TODAS las temporadas
-// ============================================================
-async function scrapePoseidonSeries() {
-  const log = [];
-  const series = {};
-
-  // Obtener series desde la página de episodios recientes
-  const epsHtml = await fetchPage(`${BASE}/episodios`);
-  if (!epsHtml) return ['PoseidonHD series: error al obtener episodios'];
-
-  // Extraer URLs únicas de series
-  const serieUrls = [...new Set(
-    (epsHtml.match(/\/serie\/\d+\/[a-zA-Z0-9-]+(?=\/temporada|")/g) || [])
-    .map(u => u.split('/temporada')[0])
-  )];
-
-  for (const serieUrl of serieUrls) {
-    const serieHtml = await fetchPage(`${BASE}${serieUrl}`);
-    const data = extractNextData(serieHtml);
-    if (!data?.thisSerie) continue;
-
-    const s = data.thisSerie;
-    const titulo = s.titles?.name || '';
-    if (!titulo) continue;
-
-    // Construir objeto de episodios por temporada
-    const episodios = {};
-    let maxTemp = 0, maxEp = 0;
-
-    for (const season of (s.seasons || [])) {
-      const tempNum = season.number;
-      if (tempNum === 0) continue; // skip temporada especial
-      if (!season.episodes?.length) continue;
-
-      episodios[tempNum] = season.episodes.map(ep => ({
-        ep: ep.number,
-        titulo: ep.title || `Episodio ${ep.number}`,
-        link: ep.url?.slug ? `${BASE}/${ep.url.slug}` : `${BASE}${serieUrl}/temporada/${tempNum}/episodio/${ep.number}`
-      }));
-
-      maxTemp = Math.max(maxTemp, tempNum);
-      maxEp = Math.max(maxEp, ...season.episodes.map(e => e.number));
+  // Fallback: extraer URLs del HTML y sacar info básica
+  if (!peliculas.length) {
+    const urls = [...new Set(html.match(/\/pelicula\/\d+\/[a-zA-Z0-9-]+/g) || [])];
+    for (const u of urls) {
+      const slugMatch = u.match(/\/pelicula\/\d+\/(.+)/);
+      if (!slugMatch) continue;
+      const titulo = slugMatch[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const link = `${BASE}${u}`;
+      // Intentar sacar poster del HTML
+      const idx = html.indexOf(slugMatch[1]);
+      let poster = '';
+      if (idx > -1) {
+        const b = html.substring(Math.max(0, idx - 400), idx + 200);
+        const pm = b.match(/https%3A%2F%2Fimage\.tmdb\.org[^"&\s]+/);
+        if (pm) poster = decodeURIComponent(pm[0]);
+      }
+      peliculas.push({ titulo, anio: '', genero: '', duracion: '', sinopsis: '', poster_url: poster, link_reproduccion: link, plataforma: 'PoseidonHD' });
     }
-
-    const genero = (s.genres || []).map(g => g.name).join(', ');
-    const anio = s.releaseDate ? new Date(s.releaseDate).getFullYear().toString() : '';
-
-    series[titulo] = {
-      titulo,
-      anio,
-      genero,
-      sinopsis: s.overview || '',
-      poster_url: s.images?.poster || '',
-      plataforma: 'PoseidonHD',
-      episodios,
-      temporadas: maxTemp,
-      ultimo_episodio: maxEp
-    };
-
-    await sleep(400);
   }
 
-  const seriesList = Object.values(series);
-  if (seriesList.length) await dbUpsert('series', seriesList, 'titulo');
-  log.push(`PoseidonHD: ${seriesList.length} series con temporadas completas`);
-  return log;
+  return peliculas;
 }
 
-// ============================================================
+// Scrapea UNA SOLA serie con todas sus temporadas
+async function scrapeSerieCompleta(serieUrl) {
+  const html = await fetchPage(`${BASE}${serieUrl}`);
+  const data = extractNextData(html);
+  if (!data?.thisSerie) return null;
+
+  const s = data.thisSerie;
+  const titulo = s.titles?.name;
+  if (!titulo) return null;
+
+  const episodios = {};
+  let maxTemp = 0, maxEp = 0;
+
+  for (const season of (s.seasons || [])) {
+    const tempNum = season.number;
+    if (tempNum === 0 || !season.episodes?.length) continue;
+
+    episodios[tempNum] = season.episodes.map(ep => ({
+      ep: ep.number,
+      titulo: ep.title || `Episodio ${ep.number}`,
+      link: ep.url?.slug ? `${BASE}/${ep.url.slug}` : `${BASE}${serieUrl}/temporada/${tempNum}/episodio/${ep.number}`
+    }));
+
+    maxTemp = Math.max(maxTemp, tempNum);
+    maxEp = Math.max(maxEp, ...season.episodes.map(e => e.number));
+  }
+
+  return {
+    titulo,
+    anio: s.releaseDate ? new Date(s.releaseDate).getFullYear().toString() : '',
+    genero: (s.genres || []).map(g => g.name).join(', '),
+    sinopsis: s.overview || '',
+    poster_url: s.images?.poster || '',
+    plataforma: 'PoseidonHD',
+    episodios,
+    temporadas: maxTemp,
+    ultimo_episodio: maxEp
+  };
+}
+
 // ANIMEFLV
-// ============================================================
 async function scrapeAnimeFLV() {
   const log = [];
   const animes = [];
   const seen = new Set();
 
-  for (let page = 1; page <= 3; page++) {
+  for (let page = 1; page <= 2; page++) {
     const html = await fetchPage(`https://www3.animeflv.net/browse?order=updated&page=${page}`);
     if (!html) continue;
-
     const urls = [...new Set(html.match(/\/anime\/[a-zA-Z0-9-]+/g) || [])];
     for (const u of urls) {
       if (seen.has(u)) continue;
       seen.add(u);
-
       const slug = u.replace('/anime/', '');
       const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-      // Extraer poster del bloque cercano a esta URL en el html del listado
       const idx = html.indexOf(u);
       let poster = '';
       if (idx > -1) {
-        const bloque = html.substring(Math.max(0, idx - 300), idx + 300);
-        const pm = bloque.match(/src="([^"]+\.(?:jpg|png|webp))"/);
+        const b = html.substring(Math.max(0, idx - 300), idx + 300);
+        const pm = b.match(/src="([^"]+\.(?:jpg|png|webp))"/);
         if (pm) poster = pm[1].startsWith('http') ? pm[1] : `https://www3.animeflv.net${pm[1]}`;
       }
-
-      // Extraer géneros
-      let genero = 'Anime';
-      const gBlock = html.substring(Math.max(0, idx - 100), idx + 400);
-      const gMatch = gBlock.match(/class="Gens"[^>]*>([\s\S]{1,300}?)<\/[^>]+>/);
-      if (gMatch) {
-        genero = gMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 100) || 'Anime';
-      }
-
-      animes.push({
-        titulo,
-        plataforma: 'AnimeFLV',
-        poster_url: poster,
-        episodios: {},
-        temporadas: 1,
-        ultimo_episodio: 0,
-        genero,
-        sinopsis: '',
-        anio: ''
-      });
+      animes.push({ titulo, plataforma: 'AnimeFLV', poster_url: poster, episodios: {}, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', anio: '' });
     }
-    await sleep(600);
   }
 
-  // Episodios recientes desde la home
+  // Episodios recientes
   const homeHtml = await fetchPage('https://www3.animeflv.net/');
   if (homeHtml) {
     const epRegex = /\/ver\/([a-zA-Z0-9-]+)-(\d+)/g;
@@ -265,10 +202,9 @@ async function scrapeAnimeFLV() {
     while ((em = epRegex.exec(homeHtml)) !== null) {
       const slug = em[1], epNum = parseInt(em[2]);
       const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const link = `https://www3.animeflv.net/ver/${slug}-${epNum}`;
       if (!epMap[slug]) epMap[slug] = { titulo, plataforma: 'AnimeFLV', episodios: { 1: [] }, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', poster_url: '', anio: '' };
       if (!epMap[slug].episodios[1].find(e => e.ep === epNum)) {
-        epMap[slug].episodios[1].push({ ep: epNum, titulo: `Episodio ${epNum}`, link });
+        epMap[slug].episodios[1].push({ ep: epNum, titulo: `Episodio ${epNum}`, link: `https://www3.animeflv.net/ver/${slug}-${epNum}` });
       }
       epMap[slug].ultimo_episodio = Math.max(epMap[slug].ultimo_episodio, epNum);
     }
@@ -276,7 +212,6 @@ async function scrapeAnimeFLV() {
     Object.values(epMap).forEach(a => { if (!existingTitles.has(a.titulo)) animes.push(a); });
   }
 
-  // Deduplicar
   const animeMap = {};
   animes.forEach(a => { if (!animeMap[a.titulo]) animeMap[a.titulo] = a; });
   const animeList = Object.values(animeMap);
@@ -285,11 +220,8 @@ async function scrapeAnimeFLV() {
   return log;
 }
 
-// ============================================================
 // PELOTA LIBRE
-// ============================================================
 async function scrapePelotaLibre() {
-  const log = [];
   const canales = [
     { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: '', link_stream: 'https://pelotalibretv.su/tyc-sports/' },
     { nombre: 'ESPN',           siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-1/' },
@@ -317,53 +249,77 @@ async function scrapePelotaLibre() {
         sigla_local: local.substring(0, 3).toUpperCase(),
         sigla_visit: visit.substring(0, 3).toUpperCase(),
         color_local: '#1565c0', color_visit: '#c62828',
-        fecha: new Date().toISOString(),
-        en_vivo: false, proveedores: ['tyc'],
-        link_tyc: links[i] || 'https://pelotalibretv.su',
-        liga: ''
+        fecha: new Date().toISOString(), en_vivo: false,
+        proveedores: ['tyc'], link_tyc: links[i] || 'https://pelotalibretv.su', liga: ''
       });
     });
     if (partidos.length) await dbInsert('partidos', partidos);
   }
-
-  log.push(`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos`);
-  return log;
+  return [`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos`];
 }
 
 // ============================================================
-// HANDLER
+// HANDLER PRINCIPAL
 // ============================================================
 export default async function handler(req) {
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret');
   if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
 
-  // DEBUG: ver __NEXT_DATA__ de cualquier página de PoseidonHD
-  const debug = url.searchParams.get('debug');
-  if (debug) {
-    const html = await fetchPage(debug);
-    if (!html) return new Response('Error', { status: 500 });
-    const data = extractNextData(html);
-    return new Response(JSON.stringify({
-      source: 'NEXT_DATA',
-      keys: Object.keys(data || {}),
-      data
-    }), { headers: { 'Content-Type': 'application/json' } });
-  }
-
   const source = url.searchParams.get('source') || 'all';
   const logs = [];
   const t = Date.now();
 
+  // DEBUG
+  const debug = url.searchParams.get('debug');
+  if (debug) {
+    const html = await fetchPage(debug);
+    const data = extractNextData(html);
+    return new Response(JSON.stringify({ keys: Object.keys(data || {}), data }),
+      { headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
-    if (source === 'all' || source === 'poseidon') {
-      logs.push(...await scrapePoseidonPeliculas());
-      logs.push(...await scrapePoseidonSeries());
+    // PELÍCULAS: scrapear página por página sin entrar a cada película
+    if (source === 'all' || source === 'peliculas' || source === 'poseidon') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const peliculas = await scrapePeliculasFromListado(page);
+      if (peliculas.length) await dbUpsert('peliculas', peliculas, 'titulo');
+      logs.push(`Películas página ${page}: ${peliculas.length} guardadas`);
     }
-    if (source === 'all' || source === 'peliculas') logs.push(...await scrapePoseidonPeliculas());
-    if (source === 'all' || source === 'series') logs.push(...await scrapePoseidonSeries());
+
+    // SERIES: scrapear de a una serie por request
+    if (source === 'series' || source === 'all') {
+      // Obtener lista de series desde episodios
+      const epsHtml = await fetchPage(`${BASE}/episodios`);
+      const serieUrls = [...new Set(
+        (epsHtml?.match(/\/serie\/\d+\/[a-zA-Z0-9-]+(?=\/temporada|")/g) || [])
+        .map(u => u.split('/temporada')[0])
+      )];
+      
+      const idx = parseInt(url.searchParams.get('idx') || '0');
+      const serieUrl = serieUrls[idx];
+      
+      if (serieUrl) {
+        const serie = await scrapeSerieCompleta(serieUrl);
+        if (serie) {
+          await dbUpsert('series', [serie], 'titulo');
+          logs.push(`Serie ${idx + 1}/${serieUrls.length}: "${serie.titulo}" — ${serie.temporadas} temp, ${serie.ultimo_episodio} eps`);
+          // Si hay más series, indicar cuántas quedan
+          if (idx + 1 < serieUrls.length) {
+            logs.push(`Quedan ${serieUrls.length - idx - 1} series. Próxima: ?secret=${SECRET}&source=series&idx=${idx + 1}`);
+          } else {
+            logs.push('✅ Todas las series procesadas');
+          }
+        }
+      } else if (source === 'all') {
+        logs.push(`Series: ${serieUrls.length} encontradas. Usá source=series&idx=0 para scrapear`);
+      }
+    }
+
     if (source === 'all' || source === 'anime') logs.push(...await scrapeAnimeFLV());
     if (source === 'all' || source === 'futbol') logs.push(...await scrapePelotaLibre());
+
   } catch (e) {
     logs.push(`Error: ${e.message}`);
   }
