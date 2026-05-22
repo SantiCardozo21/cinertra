@@ -376,7 +376,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="sub-tagline">Ingresá tu código de acceso</div>
     <div class="sub-input-wrap">
       <div class="sub-label">Código de acceso</div>
-      <input class="sub-input" id="sub-input" placeholder="000000" maxlength="8" inputmode="numeric"
+      <input class="sub-input" id="sub-input" placeholder="000000" maxlength="8" inputmode="numeric" autofocus
         oninput="this.value=this.value.replace(/[^0-9]/g,'')"
         onkeydown="if(event.key==='Enter')checkCode()">
     </div>
@@ -805,6 +805,20 @@ function showApp(code, dias) {
   loadAll();
 }
 
+// Fix para Android TV - mantener foco en el input de código
+(function() {
+  var input = document.getElementById('sub-input');
+  if (input) {
+    input.addEventListener('keydown', function(e) { e.stopPropagation(); });
+    input.addEventListener('blur', function() {
+      var screen = document.getElementById('sub-screen');
+      if (screen && !screen.classList.contains('hidden')) {
+        setTimeout(function() { input.focus(); }, 50);
+      }
+    });
+  }
+})();
+
 // Verificar sesión guardada al iniciar
 (function init() {
   var code = localStorage.getItem('cinetra_code');
@@ -1079,6 +1093,11 @@ function openPartidoModal(id) {
     );
 
   modal.classList.add('open');
+  // Foco automático en el primer canal
+  setTimeout(function() {
+    var btns = modal.querySelectorAll('.canal-modal-btn');
+    if (btns.length) btns[0].focus();
+  }, 50);
 }
 
 function renderFutbol(filtro) {
@@ -1355,6 +1374,23 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
   }
 
   document.addEventListener('keydown', function(e) {
+    // Si el modal de partido está abierto, navegar solo dentro de él
+    var modalBg = document.getElementById('partido-modal-bg');
+    if (modalBg && modalBg.classList.contains('open')) {
+      var btns = Array.from(modalBg.querySelectorAll('.canal-modal-btn'));
+      var focused = document.activeElement;
+      var idx = btns.indexOf(focused);
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (btns[idx+1]) btns[idx+1].focus(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); if (idx > 0 && btns[idx-1]) btns[idx-1].focus(); return; }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (focused && focused.href) focused.click(); return; }
+      if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack') {
+        e.preventDefault();
+        modalBg.classList.remove('open');
+        return;
+      }
+      return;
+    }
+
     var focused = document.activeElement;
     var focusables = getFocusables();
 
