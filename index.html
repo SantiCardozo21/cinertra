@@ -362,7 +362,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="sub-tagline">Ingresá tu código de acceso</div>
     <div class="sub-input-wrap">
       <div class="sub-label">Código de acceso</div>
-      <input class="sub-input" id="sub-input" placeholder="000000" maxlength="8" inputmode="numeric"
+      <input class="sub-input" id="sub-input" placeholder="000000" maxlength="8" inputmode="numeric" autofocus
         oninput="this.value=this.value.replace(/[^0-9]/g,'')"
         onkeydown="if(event.key==='Enter')checkCode()">
     </div>
