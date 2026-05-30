@@ -119,7 +119,7 @@ export default async function handler(req) {
     // Debug: ver HTML del primer servidor
     const debugServer = url.searchParams.get('debug');
     if (debugServer) {
-      const res = await fetch(playerUrls[0], {
+      const res = await fetch(playerUrls[2], {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
           'Referer': PELISJUANITA_BASE,
