@@ -10,8 +10,8 @@ async function fetchMovieInfo(slug) {
       'Accept': 'text/html,application/xhtml+xml',
     }
   });
-  if (!res.ok) return null;
-  return await res.text();
+  if (!res.ok) return { error: res.status, text: await res.text() };
+  return { ok: true, text: await res.text() };
 }
 
 function extractPlayerUrls(html) {
@@ -20,7 +20,6 @@ function extractPlayerUrls(html) {
   let match;
   while ((match = regex.exec(html)) !== null) {
     const url = match[1];
-    // Solo servidores de streaming, no descarga ni youtube
     if (!url.includes('youtube') && !url.includes('1fichier')) {
       urls.push(url);
     }
@@ -37,8 +36,6 @@ async function resolveStreamwish(embedUrl) {
       }
     });
     const html = await res.text();
-    
-    // Buscar m3u8 con los regex de ZH
     const regexes = [
       /"hls"\s*:\s*"([^"]+\.m3u8[^"]*?)"/,
       /"file":\s*"([^"]+\.m3u8[^"]*)"/,
@@ -47,7 +44,6 @@ async function resolveStreamwish(embedUrl) {
       /file:\s*["']([^"']+\.m3u8[^"']*?)["']/,
       /https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/,
     ];
-    
     for (const regex of regexes) {
       const match = html.match(regex);
       if (match) {
@@ -68,7 +64,7 @@ async function resolveVoe(embedUrl) {
       }
     });
     const html = await res.text();
-    const match = html.match(/'hls'\s*:\s*'([^']+\.m3u8[^']*)'/) || 
+    const match = html.match(/'hls'\s*:\s*'([^']+\.m3u8[^']*)'/) ||
                   html.match(/"hls"\s*:\s*"([^"]+\.m3u8[^"]*)"/) ||
                   html.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
     if (match) return (match[1] || match[0]).replace(/\\/g, '');
@@ -79,33 +75,42 @@ async function resolveVoe(embedUrl) {
 export default async function handler(req) {
   const url = new URL(req.url);
   const pageUrl = url.searchParams.get('url');
-  
+
   if (!pageUrl) {
-    return new Response(JSON.stringify({ error: 'URL requerida' }), { 
+    return new Response(JSON.stringify({ error: 'URL requerida' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
 
   try {
-    // Extraer el slug de la URL
-    // Ej: https://pelisjuanita.com/movies/pelicula/el-hombre-arana → el-hombre-arana
     const slug = pageUrl.split('/').pop();
-    
-    // 1. Obtener info de la película con las URLs de los servidores
-    const movieHtml = await fetchMovieInfo(slug);
-    if (!movieHtml) {
-      return new Response(JSON.stringify({ error: 'No se pudo obtener info de la película' }), {
+
+    // 1. Obtener info de la película
+    const movieResult = await fetchMovieInfo(slug);
+    if (!movieResult.ok) {
+      return new Response(JSON.stringify({ 
+        error: 'No se pudo obtener info de la película', 
+        slug,
+        status: movieResult.error,
+        detail: movieResult.text?.substring(0, 300)
+      }), {
         status: 404,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
+    const movieHtml = movieResult.text;
+
     // 2. Extraer URLs de los players
     const playerUrls = extractPlayerUrls(movieHtml);
-    
+
     if (!playerUrls.length) {
-      return new Response(JSON.stringify({ error: 'No se encontraron servidores', html: movieHtml.substring(0, 500) }), {
+      return new Response(JSON.stringify({ 
+        error: 'No se encontraron servidores', 
+        slug,
+        htmlPreview: movieHtml.substring(0, 500)
+      }), {
         status: 404,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
@@ -114,19 +119,18 @@ export default async function handler(req) {
     // 3. Probar cada servidor hasta encontrar el m3u8
     for (const playerUrl of playerUrls) {
       let m3u8 = null;
-      
+
       if (playerUrl.includes('streamwish') || playerUrl.includes('bysesukior') || playerUrl.includes('playnixes')) {
         m3u8 = await resolveStreamwish(playerUrl);
       } else if (playerUrl.includes('voe.sx')) {
         m3u8 = await resolveVoe(playerUrl);
       } else {
-        // Intentar con el resolver genérico
         m3u8 = await resolveStreamwish(playerUrl);
       }
 
       if (m3u8) {
-        return new Response(JSON.stringify({ 
-          ok: true, 
+        return new Response(JSON.stringify({
+          ok: true,
           m3u8,
           server: playerUrl,
           allServers: playerUrls
@@ -136,9 +140,9 @@ export default async function handler(req) {
       }
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'No se pudo resolver el m3u8',
-      servers: playerUrls 
+      servers: playerUrls
     }), {
       status: 404,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
