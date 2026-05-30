@@ -116,6 +116,25 @@ export default async function handler(req) {
       });
     }
 
+    // Debug: ver HTML del primer servidor
+    const debugServer = url.searchParams.get('debug');
+    if (debugServer) {
+      const res = await fetch(playerUrls[0], {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+          'Referer': PELISJUANITA_BASE,
+        }
+      });
+      const html = await res.text();
+      return new Response(JSON.stringify({ 
+        server: playerUrls[0],
+        status: res.status,
+        htmlPreview: html.substring(0, 2000)
+      }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
     // 3. Probar cada servidor hasta encontrar el m3u8
     for (const playerUrl of playerUrls) {
       let m3u8 = null;
