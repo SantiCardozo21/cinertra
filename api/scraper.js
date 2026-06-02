@@ -5,7 +5,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SECRET = 'cinetra-scraper-2024';
 const JUANITA_BASE = 'https://pelisjuanita.com';
 
-// ── Supabase helpers ─────────────────────────────────────────────────────────
 async function dbUpsert(table, data, conflict) {
   if (!data?.length) return true;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`, {
@@ -47,7 +46,6 @@ async function dbInsert(table, data) {
   return res.ok;
 }
 
-// ── Fetch helper ─────────────────────────────────────────────────────────────
 async function fetchPage(url) {
   try {
     const res = await fetch(url, {
@@ -69,18 +67,6 @@ function parseMoviesPage(html) {
   const movies = [];
   const seen = new Set();
 
-  // Extraer cada grid-item
-  const itemRegex = /<div class=['"][\s]*grid-item[\s]*['"]>([\s\S]*?)<\/div>\s*(?=<div class=['"][\s]*grid-item|<div class=['"]pagination)/g;
-
-  // Regex para extraer datos de cada item
-  const linkRegex = /href=['"]\/movies\/pelicula\/([^'"]+)['"]/;
-  const posterRegex = /src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/;
-  const altRegex = /alt=['"]([^'"]+)['"]/;
-  const yearRegex = /class=['"][\s]*right[\s]*['"]>\s*(\d{4})/;
-  const ratingRegex = /class=['"][\s]*left[\s]*['"]>★\s*([\d.]+)/;
-  const h2Regex = /<h2[^>]*>([^<]+)<\/h2>/;
-
-  // Alternativa: buscar todos los links a /movies/pelicula/
   const allLinks = [...html.matchAll(/href=['"][\s]*\/movies\/pelicula\/([^'"\/\s]+)[\s]*['"]/g)];
 
   for (const linkMatch of allLinks) {
@@ -88,18 +74,16 @@ function parseMoviesPage(html) {
     if (!slug || seen.has(slug)) continue;
     seen.add(slug);
 
-    // Buscar el bloque alrededor de este link
     const linkPos = html.indexOf(linkMatch[0]);
-    const blockStart = Math.max(0, linkPos - 200);
+    // FIX: buscar solo hacia adelante desde el link
+    const blockStart = linkPos;
     const blockEnd = Math.min(html.length, linkPos + 600);
     const block = html.substring(blockStart, blockEnd);
 
-    // Extraer datos del bloque
-    const posterMatch = block.match(posterRegex);
-    const altMatch = block.match(altRegex);
-    const yearMatch = block.match(yearRegex);
-    const ratingMatch = block.match(ratingRegex);
-    const h2Match = block.match(h2Regex);
+    const posterMatch = block.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
+    const altMatch = block.match(/alt=['"]([^'"]+)['"]/);
+    const yearMatch = block.match(/class=['"][\s]*right[\s]*['"]>\s*(\d{4})/);
+    const h2Match = block.match(/<h2[^>]*>([^<]+)<\/h2>/);
 
     const titulo = (altMatch?.[1] || h2Match?.[1] || slug.replace(/-/g, ' ')).trim();
     const poster_url = posterMatch?.[1]?.trim() || '';
@@ -133,7 +117,6 @@ function parseSeriesPage(html) {
   const series = [];
   const seen = new Set();
 
-  // Links relativos: ver-serie/{slug} (sin leading slash)
   const allLinks = [...html.matchAll(/href=['"][\s]*ver-serie\/([^'"\/\s\-][^'"\/\s]*)[\s]*['"]/g)];
 
   for (const linkMatch of allLinks) {
@@ -142,7 +125,8 @@ function parseSeriesPage(html) {
     seen.add(slug);
 
     const linkPos = html.indexOf(linkMatch[0]);
-    const blockStart = Math.max(0, linkPos - 200);
+    // FIX: buscar solo hacia adelante desde el link
+    const blockStart = linkPos;
     const blockEnd = Math.min(html.length, linkPos + 600);
     const block = html.substring(blockStart, blockEnd);
 
@@ -173,7 +157,6 @@ function parseSeriesPage(html) {
   return series;
 }
 
-// Obtener episodios de una serie usando serieInfo.php
 async function scrapeJuanitaSerieInfo(nombreSerie) {
   const url = `${JUANITA_BASE}/series/serieInfo.php?nombreSerie=${encodeURIComponent(nombreSerie)}`;
   const html = await fetchPage(url);
@@ -182,12 +165,9 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
   const episodios = {};
   let maxTemp = 1, maxEp = 1;
 
-  // Extraer links de episodios: /series/ver-serie/{slug}/{temp}x{ep}
   const epRegex = /href=['"]\/series\/ver-serie\/([^'"]+)\/(\d+)x(\d+)['"]/g;
-  const titleRegex = /alt=['"]([^'"]+)['"]|<h[23][^>]*>([^<]+)<\/h[23]>/;
   let match;
 
-  const episodiosParsed = [];
   while ((match = epRegex.exec(html)) !== null) {
     const slug = match[1];
     const temp = parseInt(match[2]);
@@ -197,13 +177,11 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
 
     const epUrl = `${JUANITA_BASE}/series/ver-serie/${slug}/${match[2]}x${match[3]}`;
 
-    // Buscar título del episodio en el bloque cercano
     const pos = html.indexOf(match[0]);
     const block = html.substring(Math.max(0, pos - 50), Math.min(html.length, pos + 200));
     const titleMatch = block.match(/alt=['"]([^'"]+)['"]|<span[^>]*>([^<]+)<\/span>/);
     const epTitulo = titleMatch?.[1] || titleMatch?.[2] || `Episodio ${ep}`;
 
-    // Evitar duplicados
     if (!episodios[temp].find(e => e.ep === ep)) {
       episodios[temp].push({ ep, titulo: epTitulo.trim(), link: epUrl });
       maxTemp = Math.max(maxTemp, temp);
@@ -211,14 +189,12 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
     }
   }
 
-  // Ordenar episodios por número
   Object.keys(episodios).forEach(t => {
     episodios[t].sort((a, b) => a.ep - b.ep);
   });
 
   if (Object.keys(episodios).length === 0) return null;
 
-  // Extraer poster y datos básicos
   const posterMatch = html.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
   const yearMatch = html.match(/\b(19|20)\d{2}\b/);
 
@@ -345,14 +321,12 @@ export default async function handler(req) {
 
   try {
 
-    // ── BORRAR contenido de PoseidonHD ──
     if (source === 'delete-poseidon' || source === 'all-fresh') {
       const okP = await dbDelete('peliculas', 'plataforma', 'PoseidonHD');
       const okS = await dbDelete('series', 'plataforma', 'PoseidonHD');
       logs.push(`Borradas pelis PoseidonHD: ${okP} | series: ${okS}`);
     }
 
-    // ── PELÍCULAS PelisJuanita ──
     if (source === 'all' || source === 'peliculas' || source === 'juanita') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const peliculas = await scrapeJuanitaMovies(page);
@@ -364,7 +338,6 @@ export default async function handler(req) {
       }
     }
 
-    // ── SERIES PelisJuanita ──
     if (source === 'series' || source === 'all') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeries(page);
@@ -376,7 +349,6 @@ export default async function handler(req) {
       }
     }
 
-    // ── EPISODIOS de una serie específica ──
     if (source === 'serie-info') {
       const nombre = url.searchParams.get('nombre') || '';
       if (!nombre) {
@@ -392,12 +364,10 @@ export default async function handler(req) {
       }
     }
 
-    // ── ANIME ──
     if (source === 'all' || source === 'anime') {
       logs.push(...await scrapeAnimeFLV());
     }
 
-    // ── FÚTBOL ──
     if (source === 'all' || source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
     }
