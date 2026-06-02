@@ -232,10 +232,9 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
 }
 
 async function scrapeJuanitaSeries(page) {
-  // Página 1: apiSeries.php, páginas siguientes: /series/page/N
   const url = page === 1
     ? `${JUANITA_BASE}/series/apiSeries.php`
-    : `${JUANITA_BASE}/series/page/${page}`;
+    : `${JUANITA_BASE}/series/apiSeries.php?page=${page}`;
   const html = await fetchPage(url);
   return parseSeriesPage(html);
 }
