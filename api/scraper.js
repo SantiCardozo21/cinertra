@@ -215,6 +215,14 @@ async function scrapeJuanitaSeries(page) {
   return parseSeriesPage(html);
 }
 
+async function scrapeJuanitaSeriesPopulares(page) {
+  const url = page === 1
+    ? `${JUANITA_BASE}/series/apiSeries.php?populares=`
+    : `${JUANITA_BASE}/series/apiSeries.php?populares=&page=${page}`;
+  const html = await fetchPage(url);
+  return parseSeriesPage(html);
+}
+
 // ── AnimeFLV ─────────────────────────────────────────────────────────────────
 async function scrapeAnimeFLV() {
   const log = [];
@@ -361,6 +369,17 @@ export default async function handler(req) {
         } else {
           logs.push(`Serie "${nombre}": no encontrada`);
         }
+      }
+    }
+
+    if (source === 'series-populares') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const series = await scrapeJuanitaSeriesPopulares(page);
+      if (series.length) {
+        await dbUpsert('series', series, 'titulo');
+        logs.push(`Series Populares pág ${page}: ${series.length} guardadas`);
+      } else {
+        logs.push(`Series Populares pág ${page}: 0 encontradas`);
       }
     }
 
