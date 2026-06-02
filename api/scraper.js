@@ -330,10 +330,14 @@ async function scrapePelotaLibre() {
 }
 
 // ── HANDLER PRINCIPAL ────────────────────────────────────────────────────────
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+
 export default async function handler(req) {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret');
-  if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+  if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: CORS });
 
   const source = url.searchParams.get('source') || 'all';
   const logs = [];
@@ -407,5 +411,5 @@ export default async function handler(req) {
     timestamp: new Date().toISOString(),
     duration: `${((Date.now() - t) / 1000).toFixed(1)}s`,
     logs
-  }), { headers: { 'Content-Type': 'application/json' } });
+  }), { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
