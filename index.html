@@ -978,6 +978,18 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
       return;
     }
 
+    // Cuando se presiona Arriba desde un tab, ir directo al searchbar
+    if (e.key === 'ArrowUp' && focused.classList.contains('tab')) {
+      var activePanel = document.querySelector('.panel.active');
+      var searchbar = activePanel ? activePanel.querySelector('.searchbar') : null;
+      if (searchbar) {
+        e.preventDefault();
+        searchbar.focus();
+        searchbar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+    }
+
     var next = null, dir = null;
     if (e.key === 'ArrowRight') { dir = 'right'; e.preventDefault(); }
     else if (e.key === 'ArrowLeft') { dir = 'left'; e.preventDefault(); }
