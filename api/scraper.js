@@ -133,12 +133,12 @@ function parseSeriesPage(html) {
   const series = [];
   const seen = new Set();
 
-  // Links a /series/ver-serie/
-  const allLinks = [...html.matchAll(/href=['"][\s]*\/series\/ver-serie\/([^'"\/\s]+)[\s]*['"]/g)];
+  // Links relativos: ver-serie/{slug} (sin leading slash)
+  const allLinks = [...html.matchAll(/href=['"][\s]*ver-serie\/([^'"\/\s\-][^'"\/\s]*)[\s]*['"]/g)];
 
   for (const linkMatch of allLinks) {
     const slug = linkMatch[1].trim();
-    if (!slug || seen.has(slug)) continue;
+    if (!slug || slug.startsWith('-') || /^\d+$/.test(slug) || seen.has(slug)) continue;
     seen.add(slug);
 
     const linkPos = html.indexOf(linkMatch[0]);
@@ -155,9 +155,8 @@ function parseSeriesPage(html) {
     const poster_url = posterMatch?.[1]?.trim() || '';
     const anio = yearMatch?.[1] || '';
 
-    if (!titulo) continue;
+    if (!titulo || titulo.length < 2) continue;
 
-    // Para series, el link es la URL del primer episodio o la página de la serie
     series.push({
       titulo,
       anio,
@@ -165,7 +164,7 @@ function parseSeriesPage(html) {
       sinopsis: '',
       poster_url,
       plataforma: 'PelisJuanita',
-      episodios: {},
+      episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] },
       temporadas: 1,
       ultimo_episodio: 1
     });
@@ -233,7 +232,11 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
 }
 
 async function scrapeJuanitaSeries(page) {
-  const html = await fetchPage(`${JUANITA_BASE}/series/apiSeries.php?page=${page}`);
+  // Página 1: apiSeries.php, páginas siguientes: /series/page/N
+  const url = page === 1
+    ? `${JUANITA_BASE}/series/apiSeries.php`
+    : `${JUANITA_BASE}/series/page/${page}`;
+  const html = await fetchPage(url);
   return parseSeriesPage(html);
 }
 
