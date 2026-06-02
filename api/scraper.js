@@ -75,7 +75,6 @@ function parseMoviesPage(html) {
     seen.add(slug);
 
     const linkPos = html.indexOf(linkMatch[0]);
-    // FIX: buscar solo hacia adelante desde el link
     const blockStart = linkPos;
     const blockEnd = Math.min(html.length, linkPos + 600);
     const block = html.substring(blockStart, blockEnd);
@@ -92,11 +91,7 @@ function parseMoviesPage(html) {
     if (!titulo) continue;
 
     movies.push({
-      titulo,
-      anio,
-      genero: '',
-      duracion: '',
-      sinopsis: '',
+      titulo, anio, genero: '', duracion: '', sinopsis: '',
       poster_url,
       link_reproduccion: `${JUANITA_BASE}/movies/pelicula/${slug}`,
       plataforma: 'PelisJuanita'
@@ -125,7 +120,6 @@ function parseSeriesPage(html) {
     seen.add(slug);
 
     const linkPos = html.indexOf(linkMatch[0]);
-    // FIX: buscar solo hacia adelante desde el link
     const blockStart = linkPos;
     const blockEnd = Math.min(html.length, linkPos + 600);
     const block = html.substring(blockStart, blockEnd);
@@ -142,10 +136,7 @@ function parseSeriesPage(html) {
     if (!titulo || titulo.length < 2) continue;
 
     series.push({
-      titulo,
-      anio,
-      genero: '',
-      sinopsis: '',
+      titulo, anio, genero: '', sinopsis: '',
       poster_url,
       plataforma: 'PelisJuanita',
       episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] },
@@ -164,7 +155,6 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
 
   const episodios = {};
   let maxTemp = 1, maxEp = 1;
-
   const epRegex = /href=['"]\/series\/ver-serie\/([^'"]+)\/(\d+)x(\d+)['"]/g;
   let match;
 
@@ -172,16 +162,12 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
     const slug = match[1];
     const temp = parseInt(match[2]);
     const ep = parseInt(match[3]);
-
     if (!episodios[temp]) episodios[temp] = [];
-
     const epUrl = `${JUANITA_BASE}/series/ver-serie/${slug}/${match[2]}x${match[3]}`;
-
     const pos = html.indexOf(match[0]);
     const block = html.substring(Math.max(0, pos - 50), Math.min(html.length, pos + 200));
     const titleMatch = block.match(/alt=['"]([^'"]+)['"]|<span[^>]*>([^<]+)<\/span>/);
     const epTitulo = titleMatch?.[1] || titleMatch?.[2] || `Episodio ${ep}`;
-
     if (!episodios[temp].find(e => e.ep === ep)) {
       episodios[temp].push({ ep, titulo: epTitulo.trim(), link: epUrl });
       maxTemp = Math.max(maxTemp, temp);
@@ -189,19 +175,14 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
     }
   }
 
-  Object.keys(episodios).forEach(t => {
-    episodios[t].sort((a, b) => a.ep - b.ep);
-  });
-
+  Object.keys(episodios).forEach(t => { episodios[t].sort((a, b) => a.ep - b.ep); });
   if (Object.keys(episodios).length === 0) return null;
 
   const posterMatch = html.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
   const yearMatch = html.match(/\b(19|20)\d{2}\b/);
 
   return {
-    episodios,
-    temporadas: maxTemp,
-    ultimo_episodio: maxEp,
+    episodios, temporadas: maxTemp, ultimo_episodio: maxEp,
     poster_url: posterMatch?.[1]?.trim() || '',
     anio: yearMatch?.[0] || ''
   };
@@ -219,6 +200,14 @@ async function scrapeJuanitaSeriesPopulares(page) {
   const url = page === 1
     ? `${JUANITA_BASE}/series/apiSeries.php?populares=`
     : `${JUANITA_BASE}/series/apiSeries.php?populares=&page=${page}`;
+  const html = await fetchPage(url);
+  return parseSeriesPage(html);
+}
+
+async function scrapeJuanitaSeriesEstrenos(page) {
+  const url = page === 1
+    ? `${JUANITA_BASE}/series/apiSeries.php?estrenos=`
+    : `${JUANITA_BASE}/series/apiSeries.php?estrenos=&page=${page}`;
   const html = await fetchPage(url);
   return parseSeriesPage(html);
 }
@@ -380,6 +369,17 @@ export default async function handler(req) {
         logs.push(`Series Populares pág ${page}: ${series.length} guardadas`);
       } else {
         logs.push(`Series Populares pág ${page}: 0 encontradas`);
+      }
+    }
+
+    if (source === 'series-estrenos') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const series = await scrapeJuanitaSeriesEstrenos(page);
+      if (series.length) {
+        await dbUpsert('series', series, 'titulo');
+        logs.push(`Series Estrenos pág ${page}: ${series.length} guardadas`);
+      } else {
+        logs.push(`Series Estrenos pág ${page}: 0 encontradas`);
       }
     }
 
