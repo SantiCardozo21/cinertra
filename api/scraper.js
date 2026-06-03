@@ -23,10 +23,7 @@ async function dbUpsert(table, data, conflict) {
 async function dbDelete(table, column, value) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
     method: 'DELETE',
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
-    }
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
   return res.ok;
 }
@@ -66,38 +63,23 @@ function parseMoviesPage(html) {
   if (!html) return [];
   const movies = [];
   const seen = new Set();
-
   const allLinks = [...html.matchAll(/href=['"][\s]*\/movies\/pelicula\/([^'"\/\s]+)[\s]*['"]/g)];
-
   for (const linkMatch of allLinks) {
     const slug = linkMatch[1].trim();
     if (!slug || seen.has(slug)) continue;
     seen.add(slug);
-
     const linkPos = html.indexOf(linkMatch[0]);
-    const blockStart = linkPos;
-    const blockEnd = Math.min(html.length, linkPos + 600);
-    const block = html.substring(blockStart, blockEnd);
-
+    const block = html.substring(linkPos, Math.min(html.length, linkPos + 600));
     const posterMatch = block.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
     const altMatch = block.match(/alt=['"]([^'"]+)['"]/);
     const yearMatch = block.match(/class=['"][\s]*right[\s]*['"]>\s*(\d{4})/);
     const h2Match = block.match(/<h2[^>]*>([^<]+)<\/h2>/);
-
     const titulo = (altMatch?.[1] || h2Match?.[1] || slug.replace(/-/g, ' ')).trim();
     const poster_url = posterMatch?.[1]?.trim() || '';
     const anio = yearMatch?.[1] || '';
-
     if (!titulo) continue;
-
-    movies.push({
-      titulo, anio, genero: '', duracion: '', sinopsis: '',
-      poster_url,
-      link_reproduccion: `${JUANITA_BASE}/movies/pelicula/${slug}`,
-      plataforma: 'PelisJuanita'
-    });
+    movies.push({ titulo, anio, genero: '', duracion: '', sinopsis: '', poster_url, link_reproduccion: `${JUANITA_BASE}/movies/pelicula/${slug}`, plataforma: 'PelisJuanita' });
   }
-
   return movies;
 }
 
@@ -111,40 +93,23 @@ function parseSeriesPage(html) {
   if (!html) return [];
   const series = [];
   const seen = new Set();
-
   const allLinks = [...html.matchAll(/href=['"][\s]*ver-serie\/([^'"\/\s\-][^'"\/\s]*)[\s]*['"]/g)];
-
   for (const linkMatch of allLinks) {
     const slug = linkMatch[1].trim();
     if (!slug || slug.startsWith('-') || /^\d+$/.test(slug) || seen.has(slug)) continue;
     seen.add(slug);
-
     const linkPos = html.indexOf(linkMatch[0]);
-    const blockStart = linkPos;
-    const blockEnd = Math.min(html.length, linkPos + 600);
-    const block = html.substring(blockStart, blockEnd);
-
+    const block = html.substring(linkPos, Math.min(html.length, linkPos + 600));
     const posterMatch = block.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
     const altMatch = block.match(/alt=['"]([^'"]+)['"]/);
     const yearMatch = block.match(/class=['"][\s]*right[\s]*['"]>\s*(\d{4})/);
     const h2Match = block.match(/<h2[^>]*>([^<]+)<\/h2>/);
-
     const titulo = (altMatch?.[1] || h2Match?.[1] || slug.replace(/-/g, ' ')).trim();
     const poster_url = posterMatch?.[1]?.trim() || '';
     const anio = yearMatch?.[1] || '';
-
     if (!titulo || titulo.length < 2) continue;
-
-    series.push({
-      titulo, anio, genero: '', sinopsis: '',
-      poster_url,
-      plataforma: 'PelisJuanita',
-      episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] },
-      temporadas: 1,
-      ultimo_episodio: 1
-    });
+    series.push({ titulo, anio, genero: '', sinopsis: '', poster_url, plataforma: 'PelisJuanita', episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] }, temporadas: 1, ultimo_episodio: 1 });
   }
-
   return series;
 }
 
@@ -152,18 +117,14 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
   const url = `${JUANITA_BASE}/series/serieInfo.php?nombreSerie=${encodeURIComponent(nombreSerie)}`;
   const html = await fetchPage(url);
   if (!html) return null;
-
   const episodios = {};
   let maxTemp = 1, maxEp = 1;
   const epRegex = /href=['"]\/series\/ver-serie\/([^'"]+)\/(\d+)x(\d+)['"]/g;
   let match;
-
   while ((match = epRegex.exec(html)) !== null) {
-    const slug = match[1];
-    const temp = parseInt(match[2]);
-    const ep = parseInt(match[3]);
+    const temp = parseInt(match[2]), ep = parseInt(match[3]);
     if (!episodios[temp]) episodios[temp] = [];
-    const epUrl = `${JUANITA_BASE}/series/ver-serie/${slug}/${match[2]}x${match[3]}`;
+    const epUrl = `${JUANITA_BASE}/series/ver-serie/${match[1]}/${match[2]}x${match[3]}`;
     const pos = html.indexOf(match[0]);
     const block = html.substring(Math.max(0, pos - 50), Math.min(html.length, pos + 200));
     const titleMatch = block.match(/alt=['"]([^'"]+)['"]|<span[^>]*>([^<]+)<\/span>/);
@@ -174,94 +135,65 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
       maxEp = Math.max(maxEp, ep);
     }
   }
-
   Object.keys(episodios).forEach(t => { episodios[t].sort((a, b) => a.ep - b.ep); });
   if (Object.keys(episodios).length === 0) return null;
-
   const posterMatch = html.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
   const yearMatch = html.match(/\b(19|20)\d{2}\b/);
-
-  return {
-    episodios, temporadas: maxTemp, ultimo_episodio: maxEp,
-    poster_url: posterMatch?.[1]?.trim() || '',
-    anio: yearMatch?.[0] || ''
-  };
+  return { episodios, temporadas: maxTemp, ultimo_episodio: maxEp, poster_url: posterMatch?.[1]?.trim() || '', anio: yearMatch?.[0] || '' };
 }
 
 async function scrapeJuanitaSeries(page) {
-  const url = page === 1
-    ? `${JUANITA_BASE}/series/apiSeries.php`
-    : `${JUANITA_BASE}/series/apiSeries.php?page=${page}`;
-  const html = await fetchPage(url);
-  return parseSeriesPage(html);
+  const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php` : `${JUANITA_BASE}/series/apiSeries.php?page=${page}`;
+  return parseSeriesPage(await fetchPage(url));
 }
 
 async function scrapeJuanitaSeriesPopulares(page) {
-  const url = page === 1
-    ? `${JUANITA_BASE}/series/apiSeries.php?populares=`
-    : `${JUANITA_BASE}/series/apiSeries.php?populares=&page=${page}`;
-  const html = await fetchPage(url);
-  return parseSeriesPage(html);
+  const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php?populares=` : `${JUANITA_BASE}/series/apiSeries.php?populares=&page=${page}`;
+  return parseSeriesPage(await fetchPage(url));
 }
 
 async function scrapeJuanitaSeriesEstrenos(page) {
-  const url = page === 1
-    ? `${JUANITA_BASE}/series/apiSeries.php?estrenos=`
-    : `${JUANITA_BASE}/series/apiSeries.php?estrenos=&page=${page}`;
-  const html = await fetchPage(url);
-  return parseSeriesPage(html);
+  const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php?estrenos=` : `${JUANITA_BASE}/series/apiSeries.php?estrenos=&page=${page}`;
+  return parseSeriesPage(await fetchPage(url));
 }
 
-// ── AnimeFLV ─────────────────────────────────────────────────────────────────
-async function scrapeAnimeFLV() {
-  const log = [];
+// ── AnimeFLV paginado ─────────────────────────────────────────────────────────
+async function scrapeAnimeFLVPage(page) {
   const animes = [];
   const seen = new Set();
 
-  for (let page = 1; page <= 2; page++) {
-    const html = await fetchPage(`https://www3.animeflv.net/browse?order=updated&page=${page}`);
-    if (!html) continue;
-    const urls = [...new Set(html.match(/\/anime\/[a-zA-Z0-9-]+/g) || [])];
-    for (const u of urls) {
-      if (seen.has(u)) continue;
-      seen.add(u);
-      const slug = u.replace('/anime/', '');
-      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const idx = html.indexOf(u);
-      let poster = '';
-      if (idx > -1) {
-        const b = html.substring(Math.max(0, idx - 300), idx + 300);
-        const pm = b.match(/src="([^"]+\.(?:jpg|png|webp))"/);
-        if (pm) poster = pm[1].startsWith('http') ? pm[1] : `https://www3.animeflv.net${pm[1]}`;
-      }
-      animes.push({ titulo, plataforma: 'AnimeFLV', poster_url: poster, episodios: {}, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', anio: '' });
-    }
+  // order=title para catálogo completo A-Z
+  const html = await fetchPage(`https://www3.animeflv.net/browse?order=title&page=${page}`);
+  if (!html) return 0;
+
+  const allLinks = [...html.matchAll(/href="\/anime\/([a-zA-Z0-9\-]+)"/g)];
+
+  for (const linkMatch of allLinks) {
+    const slug = linkMatch[1].trim();
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+
+    const linkPos = html.indexOf(linkMatch[0]);
+    const block = html.substring(linkPos, Math.min(html.length, linkPos + 600));
+
+    const posterMatch = block.match(/src="(https:\/\/animeflv\.net\/uploads\/animes\/covers\/[^"]+)"/);
+    const poster_url = posterMatch?.[1] || '';
+
+    const altMatch = block.match(/alt="([^"]+)"/);
+    const h3Match = block.match(/<h3[^>]*>([^<]+)<\/h3>/);
+    const titulo = (altMatch?.[1] || h3Match?.[1] || slug).trim();
+
+    if (!titulo || titulo === 'AnimeFLV') continue;
+
+    animes.push({
+      titulo, plataforma: 'AnimeFLV', poster_url,
+      episodios: {}, temporadas: 1, ultimo_episodio: 0,
+      genero: 'Anime', sinopsis: '', anio: ''
+    });
   }
 
-  const homeHtml = await fetchPage('https://www3.animeflv.net/');
-  if (homeHtml) {
-    const epRegex = /\/ver\/([a-zA-Z0-9-]+)-(\d+)/g;
-    let em;
-    const epMap = {};
-    while ((em = epRegex.exec(homeHtml)) !== null) {
-      const slug = em[1], epNum = parseInt(em[2]);
-      const titulo = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      if (!epMap[slug]) epMap[slug] = { titulo, plataforma: 'AnimeFLV', episodios: { 1: [] }, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', poster_url: '', anio: '' };
-      if (!epMap[slug].episodios[1].find(e => e.ep === epNum)) {
-        epMap[slug].episodios[1].push({ ep: epNum, titulo: `Episodio ${epNum}`, link: `https://www3.animeflv.net/ver/${slug}-${epNum}` });
-      }
-      epMap[slug].ultimo_episodio = Math.max(epMap[slug].ultimo_episodio, epNum);
-    }
-    const existingTitles = new Set(animes.map(a => a.titulo));
-    Object.values(epMap).forEach(a => { if (!existingTitles.has(a.titulo)) animes.push(a); });
-  }
-
-  const animeMap = {};
-  animes.forEach(a => { if (!animeMap[a.titulo]) animeMap[a.titulo] = a; });
-  const animeList = Object.values(animeMap);
-  if (animeList.length) await dbUpsert('anime', animeList, 'titulo');
-  log.push(`AnimeFLV: ${animeList.length} animes`);
-  return log;
+  if (animes.length) await dbUpsert('anime', animes, 'titulo');
+  return animes.length;
 }
 
 // ── Pelota Libre ─────────────────────────────────────────────────────────────
@@ -277,7 +209,6 @@ async function scrapePelotaLibre() {
     { nombre: 'DeporTV',        siglas: 'DEP',  categoria: 'deportes', color: '#1a237e', logo_url: '', link_stream: 'https://pelotalibretv.su/deportv/' },
   ];
   await dbUpsert('canales', canales, 'nombre');
-
   const html = await fetchPage('https://pelotalibretv.su/agenda/');
   const partidos = [];
   if (html) {
@@ -288,14 +219,7 @@ async function scrapePelotaLibre() {
       if (!m) return;
       const local = m[1].trim(), visit = m[2].trim();
       if (local.length < 2 || visit.length < 2) return;
-      partidos.push({
-        equipo_local: local, equipo_visit: visit,
-        sigla_local: local.substring(0, 3).toUpperCase(),
-        sigla_visit: visit.substring(0, 3).toUpperCase(),
-        color_local: '#1565c0', color_visit: '#c62828',
-        fecha: new Date().toISOString(), en_vivo: false,
-        proveedores: ['tyc'], link_tyc: links[i] || 'https://pelotalibretv.su'
-      });
+      partidos.push({ equipo_local: local, equipo_visit: visit, sigla_local: local.substring(0, 3).toUpperCase(), sigla_visit: visit.substring(0, 3).toUpperCase(), color_local: '#1565c0', color_visit: '#c62828', fecha: new Date().toISOString(), en_vivo: false, proveedores: ['tyc'], link_tyc: links[i] || 'https://pelotalibretv.su' });
     });
     if (partidos.length) await dbInsert('partidos', partidos);
   }
@@ -327,67 +251,48 @@ export default async function handler(req) {
     if (source === 'all' || source === 'peliculas' || source === 'juanita') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const peliculas = await scrapeJuanitaMovies(page);
-      if (peliculas.length) {
-        await dbUpsert('peliculas', peliculas, 'titulo');
-        logs.push(`Películas PelisJuanita pág ${page}: ${peliculas.length} guardadas`);
-      } else {
-        logs.push(`Películas PelisJuanita pág ${page}: 0 encontradas`);
-      }
+      if (peliculas.length) { await dbUpsert('peliculas', peliculas, 'titulo'); logs.push(`Películas PelisJuanita pág ${page}: ${peliculas.length} guardadas`); }
+      else logs.push(`Películas PelisJuanita pág ${page}: 0 encontradas`);
     }
 
     if (source === 'series' || source === 'all') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeries(page);
-      if (series.length) {
-        await dbUpsert('series', series, 'titulo');
-        logs.push(`Series PelisJuanita pág ${page}: ${series.length} guardadas`);
-      } else {
-        logs.push(`Series PelisJuanita pág ${page}: 0 encontradas`);
-      }
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series PelisJuanita pág ${page}: ${series.length} guardadas`); }
+      else logs.push(`Series PelisJuanita pág ${page}: 0 encontradas`);
     }
 
     if (source === 'serie-info') {
       const nombre = url.searchParams.get('nombre') || '';
-      if (!nombre) {
-        logs.push('Falta el parámetro ?nombre=');
-      } else {
+      if (!nombre) { logs.push('Falta el parámetro ?nombre='); }
+      else {
         const info = await scrapeJuanitaSerieInfo(nombre);
-        if (info) {
-          await dbUpsert('series', [{ titulo: nombre, ...info, plataforma: 'PelisJuanita' }], 'titulo');
-          logs.push(`Serie "${nombre}": ${info.temporadas} temporadas, ${info.ultimo_episodio} eps`);
-        } else {
-          logs.push(`Serie "${nombre}": no encontrada`);
-        }
+        if (info) { await dbUpsert('series', [{ titulo: nombre, ...info, plataforma: 'PelisJuanita' }], 'titulo'); logs.push(`Serie "${nombre}": ${info.temporadas} temporadas, ${info.ultimo_episodio} eps`); }
+        else logs.push(`Serie "${nombre}": no encontrada`);
       }
     }
 
     if (source === 'series-populares') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesPopulares(page);
-      if (series.length) {
-        await dbUpsert('series', series, 'titulo');
-        logs.push(`Series Populares pág ${page}: ${series.length} guardadas`);
-      } else {
-        logs.push(`Series Populares pág ${page}: 0 encontradas`);
-      }
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Populares pág ${page}: ${series.length} guardadas`); }
+      else logs.push(`Series Populares pág ${page}: 0 encontradas`);
     }
 
     if (source === 'series-estrenos') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesEstrenos(page);
-      if (series.length) {
-        await dbUpsert('series', series, 'titulo');
-        logs.push(`Series Estrenos pág ${page}: ${series.length} guardadas`);
-      } else {
-        logs.push(`Series Estrenos pág ${page}: 0 encontradas`);
-      }
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Estrenos pág ${page}: ${series.length} guardadas`); }
+      else logs.push(`Series Estrenos pág ${page}: 0 encontradas`);
     }
 
-    if (source === 'all' || source === 'anime') {
-      logs.push(...await scrapeAnimeFLV());
+    if (source === 'anime') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const count = await scrapeAnimeFLVPage(page);
+      logs.push(`AnimeFLV pág ${page}: ${count} animes guardados`);
     }
 
-    if (source === 'all' || source === 'futbol') {
+    if (source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
     }
 
