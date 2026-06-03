@@ -57,15 +57,33 @@ async function fetchPage(url) {
   } catch { return null; }
 }
 
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&aacute;/g,'á').replace(/&eacute;/g,'é').replace(/&iacute;/g,'í')
+    .replace(/&oacute;/g,'ó').replace(/&uacute;/g,'ú').replace(/&ntilde;/g,'ñ')
+    .replace(/&Aacute;/g,'Á').replace(/&Eacute;/g,'É').replace(/&Iacute;/g,'Í')
+    .replace(/&Oacute;/g,'Ó').replace(/&Uacute;/g,'Ú').replace(/&Ntilde;/g,'Ñ')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&quot;/g,'"').replace(/&#39;/g,"'")
+    .replace(/\s+/g,' ').trim();
+}
+
+function titleToSlug(titulo) {
+  return titulo
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[:!¡?¿'",\.]/g, '')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 // ── Parsers PelisJuanita ──────────────────────────────────────────────────────
 function parseMoviePage(html) {
   if (!html) return null;
-
-  // Sinopsis
   const sinopsisMatch = html.match(/<p class="sinopsis">([^<]+)<\/p>/);
   const sinopsis = sinopsisMatch?.[1]?.trim() || '';
-
-  // Géneros desde <p id='sGenero'>
   const sGeneroMatch = html.match(/<p id=['"]sGenero['"]>([\s\S]*?)<\/p>/);
   const generos = [];
   if (sGeneroMatch) {
@@ -73,32 +91,23 @@ function parseMoviePage(html) {
     tagMatches.forEach(m => { const g = m[1].trim(); if (g) generos.push(g); });
   }
   const genero = generos.join(', ');
-
-  // Duración
   const duracionMatch = html.match(/<span>(\d+ min\.)<\/span>/);
   const duracion = duracionMatch?.[1] || '';
-
   return { sinopsis, genero, duracion };
 }
 
 function parseSeriesInfoPage(html) {
   if (!html) return null;
-
-  // Sinopsis - busca <p class="sinopsis"> o <div class="sinopsis">
   const sinopsisMatch = html.match(/<p class="sinopsis">([^<]+)<\/p>/) ||
                         html.match(/<div[^>]*class="sinopsis"[^>]*>([^<]+)<\/div>/);
   const sinopsis = sinopsisMatch?.[1]?.trim() || '';
-
-  // Géneros
   const sGeneroMatch = html.match(/<p id=['"]sGenero['"]>([\s\S]*?)<\/p>/);
   const generos = [];
   if (sGeneroMatch) {
     const tagMatches = [...sGeneroMatch[1].matchAll(/class="badge-etiqueta"[^>]*>[\s\S]*?<\/i>\s*([^<\n\r]+)/g)];
     tagMatches.forEach(m => { const g = m[1].trim(); if (g) generos.push(g); });
   }
-  const genero = generos.join(', ');
-
-  return { sinopsis, genero };
+  return { sinopsis, genero: generos.join(', ') };
 }
 
 // ── Enrich Películas ──────────────────────────────────────────────────────────
@@ -109,30 +118,17 @@ async function enrichPeliculas(batch) {
   );
   const movies = await res.json();
   if (!Array.isArray(movies) || !movies.length) return 0;
-
   let enriched = 0;
   for (const movie of movies) {
     const slug = movie.link_reproduccion?.split('/').pop();
     if (!slug) continue;
-
     const html = await fetchPage(`${JUANITA_BASE}/movies/movieInfo.php?title=${slug}`);
-    if (!html) {
-      // Si no encontró la página, poner un placeholder para no volver a intentar
-      await dbUpdate('peliculas', `titulo=eq.${encodeURIComponent(movie.titulo)}`, { genero: '-' });
-      continue;
-    }
-
+    if (!html) { await dbUpdate('peliculas', `titulo=eq.${encodeURIComponent(movie.titulo)}`, { genero: '-' }); continue; }
     const info = parseMoviePage(html);
     if (!info) continue;
-
-    await dbUpdate('peliculas', `titulo=eq.${encodeURIComponent(movie.titulo)}`, {
-      genero: info.genero || '-',
-      sinopsis: info.sinopsis,
-      duracion: info.duracion
-    });
+    await dbUpdate('peliculas', `titulo=eq.${encodeURIComponent(movie.titulo)}`, { genero: info.genero || '-', sinopsis: info.sinopsis, duracion: info.duracion });
     enriched++;
   }
-
   return enriched;
 }
 
@@ -144,25 +140,61 @@ async function enrichSeries(batch) {
   );
   const series = await res.json();
   if (!Array.isArray(series) || !series.length) return 0;
-
   let enriched = 0;
   for (const serie of series) {
     const html = await fetchPage(`${JUANITA_BASE}/series/serieInfo.php?nombreSerie=${encodeURIComponent(serie.titulo)}`);
-    if (!html) {
-      await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: '-' });
+    if (!html) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: '-' }); continue; }
+    const info = parseSeriesInfoPage(html);
+    if (!info) continue;
+    await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: info.genero || '-', sinopsis: info.sinopsis });
+    enriched++;
+  }
+  return enriched;
+}
+
+// ── Enrich Anime ──────────────────────────────────────────────────────────────
+async function enrichAnime(batch) {
+  // Busca animes con sinopsis vacía (no enriquecidos aún)
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/anime?sinopsis=eq.&select=titulo&limit=${batch}&order=created_at.asc`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+  );
+  const animes = await res.json();
+  if (!Array.isArray(animes) || !animes.length) return 0;
+
+  let enriched = 0;
+  for (const anime of animes) {
+    const slug = titleToSlug(anime.titulo);
+    const html = await fetchPage(`https://www3.animeflv.net/anime/${slug}`);
+
+    if (!html || !html.includes('class="Nvgnrs"')) {
+      // Página no encontrada o sin géneros → marcar para no reintentar
+      await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, { sinopsis: '-' });
       continue;
     }
 
-    const info = parseSeriesInfoPage(html);
-    if (!info) continue;
+    // Géneros desde <nav class="Nvgnrs">
+    const nvgnrsMatch = html.match(/<nav class="Nvgnrs">([\s\S]*?)<\/nav>/);
+    const generos = [];
+    if (nvgnrsMatch) {
+      const genMatches = [...nvgnrsMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)];
+      genMatches.forEach(m => {
+        const g = decodeHtmlEntities(m[1]);
+        if (g && g.length > 1) generos.push(g);
+      });
+    }
 
-    await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, {
-      genero: info.genero || '-',
-      sinopsis: info.sinopsis
+    // Sinopsis desde <div class="Description"><p>
+    const descMatch = html.match(/<div class="Description">\s*<p>([\s\S]*?)<\/p>/);
+    const sinopsisRaw = descMatch?.[1] || '';
+    const sinopsis = decodeHtmlEntities(sinopsisRaw.replace(/<[^>]+>/g, ' ')) || '-';
+
+    await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, {
+      genero: generos.length ? generos.join(', ') : 'Anime',
+      sinopsis
     });
     enriched++;
   }
-
   return enriched;
 }
 
@@ -323,35 +355,29 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
-
   const url = new URL(req.url);
   const secret = url.searchParams.get('secret');
   if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: CORS });
-
   const source = url.searchParams.get('source') || '';
   const logs = [];
   const t = Date.now();
 
   try {
-
     if (source === 'delete-poseidon') {
       logs.push(`Borradas: pelis=${await dbDelete('peliculas','plataforma','PoseidonHD')} series=${await dbDelete('series','plataforma','PoseidonHD')}`);
     }
-
     if (source === 'peliculas') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const peliculas = await scrapeJuanitaMovies(page);
       if (peliculas.length) { await dbUpsert('peliculas', peliculas, 'titulo'); logs.push(`Películas pág ${page}: ${peliculas.length} guardadas`); }
       else logs.push(`Películas pág ${page}: 0 encontradas`);
     }
-
     if (source === 'series') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeries(page);
       if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series pág ${page}: ${series.length} guardadas`); }
       else logs.push(`Series pág ${page}: 0 encontradas`);
     }
-
     if (source === 'serie-info') {
       const nombre = url.searchParams.get('nombre') || '';
       if (!nombre) { logs.push('Falta ?nombre='); }
@@ -361,51 +387,47 @@ export default async function handler(req) {
         else logs.push(`Serie "${nombre}": no encontrada`);
       }
     }
-
     if (source === 'series-populares') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesPopulares(page);
       if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Populares pág ${page}: ${series.length} guardadas`); }
       else logs.push(`Series Populares pág ${page}: 0 encontradas`);
     }
-
     if (source === 'series-estrenos') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesEstrenos(page);
       if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Estrenos pág ${page}: ${series.length} guardadas`); }
       else logs.push(`Series Estrenos pág ${page}: 0 encontradas`);
     }
-
     if (source === 'anime') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapeAnimeFLVPage(page);
       logs.push(`AnimeFLV pág ${page}: ${count} animes guardados`);
     }
-
     if (source === 'enrich-peliculas') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichPeliculas(batch);
       logs.push(`Enrich películas: ${count} enriquecidas`);
     }
-
     if (source === 'enrich-series') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichSeries(batch);
       logs.push(`Enrich series: ${count} enriquecidas`);
     }
-
+    if (source === 'enrich-anime') {
+      const batch = parseInt(url.searchParams.get('batch') || '5');
+      const count = await enrichAnime(batch);
+      logs.push(`Enrich anime: ${count} enriquecidos`);
+    }
     if (source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
     }
-
   } catch (e) {
     logs.push(`Error: ${e.message}`);
   }
 
   return new Response(JSON.stringify({
-    ok: true,
-    timestamp: new Date().toISOString(),
-    duration: `${((Date.now() - t) / 1000).toFixed(1)}s`,
-    logs
+    ok: true, timestamp: new Date().toISOString(),
+    duration: `${((Date.now() - t) / 1000).toFixed(1)}s`, logs
   }), { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
