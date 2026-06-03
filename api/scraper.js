@@ -68,17 +68,6 @@ function decodeHtmlEntities(str) {
     .replace(/\s+/g,' ').trim();
 }
 
-function titleToSlug(titulo) {
-  return titulo
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[:!¡?¿'",\.]/g, '')
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
-
 // ── Parsers PelisJuanita ──────────────────────────────────────────────────────
 function parseMoviePage(html) {
   if (!html) return null;
@@ -90,10 +79,8 @@ function parseMoviePage(html) {
     const tagMatches = [...sGeneroMatch[1].matchAll(/class="badge-etiqueta"[^>]*>[\s\S]*?<\/i>\s*([^<\n\r]+)/g)];
     tagMatches.forEach(m => { const g = m[1].trim(); if (g) generos.push(g); });
   }
-  const genero = generos.join(', ');
   const duracionMatch = html.match(/<span>(\d+ min\.)<\/span>/);
-  const duracion = duracionMatch?.[1] || '';
-  return { sinopsis, genero, duracion };
+  return { sinopsis, genero: generos.join(', '), duracion: duracionMatch?.[1] || '' };
 }
 
 function parseSeriesInfoPage(html) {
@@ -152,11 +139,11 @@ async function enrichSeries(batch) {
   return enriched;
 }
 
-// ── Enrich Anime ──────────────────────────────────────────────────────────────
+// ── Enrich Anime (usa slug guardado en DB) ────────────────────────────────────
 async function enrichAnime(batch) {
-  // Busca animes con sinopsis vacía (no enriquecidos aún)
+  // Solo enriquece animes que tienen slug guardado y sinopsis vacía
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/anime?sinopsis=eq.&select=titulo&limit=${batch}&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/anime?sinopsis=eq.&slug=neq.&select=titulo,slug&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const animes = await res.json();
@@ -164,11 +151,10 @@ async function enrichAnime(batch) {
 
   let enriched = 0;
   for (const anime of animes) {
-    const slug = titleToSlug(anime.titulo);
-    const html = await fetchPage(`https://www3.animeflv.net/anime/${slug}`);
+    if (!anime.slug) continue;
+    const html = await fetchPage(`https://www3.animeflv.net/anime/${anime.slug}`);
 
     if (!html || !html.includes('class="Nvgnrs"')) {
-      // Página no encontrada o sin géneros → marcar para no reintentar
       await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, { sinopsis: '-' });
       continue;
     }
@@ -186,12 +172,11 @@ async function enrichAnime(batch) {
 
     // Sinopsis desde <div class="Description"><p>
     const descMatch = html.match(/<div class="Description">\s*<p>([\s\S]*?)<\/p>/);
-    const sinopsisRaw = descMatch?.[1] || '';
-    const sinopsis = decodeHtmlEntities(sinopsisRaw.replace(/<[^>]+>/g, ' ')) || '-';
+    const sinopsis = descMatch ? decodeHtmlEntities(descMatch[1].replace(/<[^>]+>/g, ' ')) : '-';
 
     await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, {
       genero: generos.length ? generos.join(', ') : 'Anime',
-      sinopsis
+      sinopsis: sinopsis || '-'
     });
     enriched++;
   }
@@ -215,10 +200,8 @@ function parseMoviesPage(html) {
     const yearMatch = block.match(/class=['"][\s]*right[\s]*['"]>\s*(\d{4})/);
     const h2Match = block.match(/<h2[^>]*>([^<]+)<\/h2>/);
     const titulo = (altMatch?.[1] || h2Match?.[1] || slug.replace(/-/g, ' ')).trim();
-    const poster_url = posterMatch?.[1]?.trim() || '';
-    const anio = yearMatch?.[1] || '';
     if (!titulo) continue;
-    movies.push({ titulo, anio, genero: '', duracion: '', sinopsis: '', poster_url, link_reproduccion: `${JUANITA_BASE}/movies/pelicula/${slug}`, plataforma: 'PelisJuanita' });
+    movies.push({ titulo, anio: yearMatch?.[1] || '', genero: '', duracion: '', sinopsis: '', poster_url: posterMatch?.[1]?.trim() || '', link_reproduccion: `${JUANITA_BASE}/movies/pelicula/${slug}`, plataforma: 'PelisJuanita' });
   }
   return movies;
 }
@@ -244,10 +227,8 @@ function parseSeriesPage(html) {
     const yearMatch = block.match(/class=['"][\s]*right[\s]*['"]>\s*(\d{4})/);
     const h2Match = block.match(/<h2[^>]*>([^<]+)<\/h2>/);
     const titulo = (altMatch?.[1] || h2Match?.[1] || slug.replace(/-/g, ' ')).trim();
-    const poster_url = posterMatch?.[1]?.trim() || '';
-    const anio = yearMatch?.[1] || '';
     if (!titulo || titulo.length < 2) continue;
-    series.push({ titulo, anio, genero: '', sinopsis: '', poster_url, plataforma: 'PelisJuanita', episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] }, temporadas: 1, ultimo_episodio: 1 });
+    series.push({ titulo, anio: yearMatch?.[1] || '', genero: '', sinopsis: '', poster_url: posterMatch?.[1]?.trim() || '', plataforma: 'PelisJuanita', episodios: { 1: [{ ep: 1, titulo: 'Episodio 1', link: `${JUANITA_BASE}/series/ver-serie/${slug}/01x01` }] }, temporadas: 1, ultimo_episodio: 1 });
   }
   return series;
 }
@@ -269,12 +250,11 @@ async function scrapeJuanitaSerieInfo(nombreSerie) {
     const epTitulo = titleMatch?.[1] || titleMatch?.[2] || `Episodio ${ep}`;
     if (!episodios[temp].find(e => e.ep === ep)) {
       episodios[temp].push({ ep, titulo: epTitulo.trim(), link: epUrl });
-      maxTemp = Math.max(maxTemp, temp);
-      maxEp = Math.max(maxEp, ep);
+      maxTemp = Math.max(maxTemp, temp); maxEp = Math.max(maxEp, ep);
     }
   }
   Object.keys(episodios).forEach(t => { episodios[t].sort((a, b) => a.ep - b.ep); });
-  if (Object.keys(episodios).length === 0) return null;
+  if (!Object.keys(episodios).length) return null;
   const posterMatch = html.match(/src=['"]\s*(https:\/\/image\.tmdb\.org[^'"]+\.(?:jpg|png|webp))\s*['"]/);
   const yearMatch = html.match(/\b(19|20)\d{2}\b/);
   return { episodios, temporadas: maxTemp, ultimo_episodio: maxEp, poster_url: posterMatch?.[1]?.trim() || '', anio: yearMatch?.[0] || '' };
@@ -284,18 +264,16 @@ async function scrapeJuanitaSeries(page) {
   const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php` : `${JUANITA_BASE}/series/apiSeries.php?page=${page}`;
   return parseSeriesPage(await fetchPage(url));
 }
-
 async function scrapeJuanitaSeriesPopulares(page) {
   const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php?populares=` : `${JUANITA_BASE}/series/apiSeries.php?populares=&page=${page}`;
   return parseSeriesPage(await fetchPage(url));
 }
-
 async function scrapeJuanitaSeriesEstrenos(page) {
   const url = page === 1 ? `${JUANITA_BASE}/series/apiSeries.php?estrenos=` : `${JUANITA_BASE}/series/apiSeries.php?estrenos=&page=${page}`;
   return parseSeriesPage(await fetchPage(url));
 }
 
-// ── AnimeFLV paginado ─────────────────────────────────────────────────────────
+// ── AnimeFLV paginado — ahora guarda el slug ──────────────────────────────────
 async function scrapeAnimeFLVPage(page) {
   const animes = [];
   const seen = new Set();
@@ -309,12 +287,22 @@ async function scrapeAnimeFLVPage(page) {
     const linkPos = html.indexOf(linkMatch[0]);
     const block = html.substring(linkPos, Math.min(html.length, linkPos + 600));
     const posterMatch = block.match(/src="(https:\/\/animeflv\.net\/uploads\/animes\/covers\/[^"]+)"/);
-    const poster_url = posterMatch?.[1] || '';
     const altMatch = block.match(/alt="([^"]+)"/);
     const h3Match = block.match(/<h3[^>]*>([^<]+)<\/h3>/);
     const titulo = (altMatch?.[1] || h3Match?.[1] || slug).trim();
     if (!titulo || titulo === 'AnimeFLV') continue;
-    animes.push({ titulo, plataforma: 'AnimeFLV', poster_url, episodios: {}, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', anio: '' });
+    animes.push({
+      titulo,
+      slug,          // ← slug real de AnimeFLV
+      plataforma: 'AnimeFLV',
+      poster_url: posterMatch?.[1] || '',
+      episodios: {},
+      temporadas: 1,
+      ultimo_episodio: 0,
+      genero: 'Anime',
+      sinopsis: '',
+      anio: ''
+    });
   }
   if (animes.length) await dbUpsert('anime', animes, 'titulo');
   return animes.length;
@@ -380,7 +368,7 @@ export default async function handler(req) {
     }
     if (source === 'serie-info') {
       const nombre = url.searchParams.get('nombre') || '';
-      if (!nombre) { logs.push('Falta ?nombre='); }
+      if (!nombre) logs.push('Falta ?nombre=');
       else {
         const info = await scrapeJuanitaSerieInfo(nombre);
         if (info) { await dbUpsert('series', [{ titulo: nombre, ...info, plataforma: 'PelisJuanita' }], 'titulo'); logs.push(`Serie "${nombre}": ${info.temporadas} temp, ${info.ultimo_episodio} eps`); }
