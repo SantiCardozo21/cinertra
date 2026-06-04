@@ -4,6 +4,7 @@ const SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
 const SECRET = 'cinetra-scraper-2024';
 const JUANITA_BASE = 'https://pelisjuanita.com';
+const POSEIDON_BASE = 'https://www.poseidonhd2.co';
 
 async function dbUpsert(table, data, conflict) {
   if (!data?.length) return true;
@@ -68,7 +69,174 @@ function decodeHtmlEntities(str) {
     .replace(/\s+/g,' ').trim();
 }
 
-// ── Parsers PelisJuanita ──────────────────────────────────────────────────────
+// ── PoseidonHD2 ───────────────────────────────────────────────────────────────
+async function getPoseidonBuildId() {
+  const html = await fetchPage(POSEIDON_BASE);
+  if (!html) return null;
+  const match = html.match(/"buildId"\s*:\s*"([^"]+)"/);
+  return match?.[1] || null;
+}
+
+async function fetchWithTimeout(url, ms = 5000) {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36' }
+    });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    return await res.text();
+  } catch { return null; }
+}
+
+function formatRuntime(mins) {
+  if (!mins || mins <= 0) return '';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function isHD(videos) {
+  // Checks if any video has HD quality (not CAM)
+  const all = [
+    ...(videos?.latino || []),
+    ...(videos?.spanish || []),
+    ...(videos?.english || [])
+  ];
+  if (!all.length) return false;
+  return all.some(v => v.quality && !v.quality.toUpperCase().includes('CAM'));
+}
+
+function extractNextData(html) {
+  if (!html) return null;
+  const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch { return null; }
+}
+
+function poseidonMovieToDb(m) {
+  const slugParts = m.url?.slug?.split('/') || [];
+  const id = slugParts[1] || m.TMDbId || '';
+  const slugName = slugParts[2] || '';
+  const year = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
+  return {
+    titulo: m.titles?.name || '',
+    anio: year,
+    genero: m.genres?.map(g => g.name).join(', ') || '',
+    duracion: formatRuntime(m.runtime),
+    sinopsis: m.overview || '',
+    poster_url: m.images?.poster || '',
+    link_reproduccion: id ? `${POSEIDON_BASE}/pelicula/${id}/${slugName}` : '',
+    plataforma: 'PoseidonHD'
+  };
+}
+
+function poseidonSerieToDb(s) {
+  const slugParts = s.url?.slug?.split('/') || [];
+  const id = slugParts[1] || s.TMDbId || '';
+  const slugName = slugParts[2] || '';
+  const year = s.releaseDate ? s.releaseDate.substring(0, 4) : '';
+  return {
+    titulo: s.titles?.name || '',
+    anio: year,
+    genero: s.genres?.map(g => g.name).join(', ') || '',
+    sinopsis: s.overview || '',
+    poster_url: s.images?.poster || '',
+    plataforma: 'PoseidonHD',
+    episodios: {},
+    temporadas: 1,
+    ultimo_episodio: 0
+  };
+}
+
+async function checkPoseidonMovieHD(movie) {
+  // Visits individual movie page and returns db object only if HD quality exists
+  const slugParts = movie.url?.slug?.split('/') || [];
+  const id = slugParts[1] || movie.TMDbId || '';
+  const slugName = slugParts[2] || '';
+  if (!id) return null;
+
+  const html = await fetchWithTimeout(`${POSEIDON_BASE}/pelicula/${id}/${slugName}`, 5000);
+  const nextData = extractNextData(html);
+  if (!nextData) return null;
+
+  const videos = nextData?.props?.pageProps?.thisMovie?.videos;
+  if (!videos) return null;
+  if (!isHD(videos)) return null; // Skip CAM-only
+
+  return poseidonMovieToDb(movie);
+}
+
+async function checkPoseidonSerieHD(serie) {
+  const slugParts = serie.url?.slug?.split('/') || [];
+  const id = slugParts[1] || serie.TMDbId || '';
+  const slugName = slugParts[2] || '';
+  if (!id) return null;
+
+  const html = await fetchWithTimeout(`${POSEIDON_BASE}/serie/${id}/${slugName}`, 5000);
+  const nextData = extractNextData(html);
+  if (!nextData) return null;
+
+  const videos = nextData?.props?.pageProps?.thisTvshow?.videos
+              || nextData?.props?.pageProps?.thisMovie?.videos;
+  if (!videos) return null;
+  if (!isHD(videos)) return null;
+
+  return poseidonSerieToDb(serie);
+}
+
+async function scrapePoseidonMovies(page) {
+  const buildId = await getPoseidonBuildId();
+  if (!buildId) return 0;
+
+  const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/peliculas.json?page=${page}`);
+  if (!raw) return 0;
+  let data;
+  try { data = JSON.parse(raw); } catch { return 0; }
+
+  const movies = data?.pageProps?.movies || [];
+  if (!movies.length) return 0;
+
+  // Process in parallel batches of 4 to stay within timeout
+  const CONCURRENCY = 4;
+  const hdMovies = [];
+  for (let i = 0; i < movies.length; i += CONCURRENCY) {
+    const batch = movies.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(batch.map(m => checkPoseidonMovieHD(m)));
+    results.forEach(r => { if (r.status === 'fulfilled' && r.value) hdMovies.push(r.value); });
+  }
+
+  if (hdMovies.length) await dbUpsert('peliculas', hdMovies, 'titulo');
+  return hdMovies.length;
+}
+
+async function scrapePoseidonSeries(page) {
+  const buildId = await getPoseidonBuildId();
+  if (!buildId) return 0;
+
+  const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/series.json?page=${page}`);
+  if (!raw) return 0;
+  let data;
+  try { data = JSON.parse(raw); } catch { return 0; }
+
+  const series = data?.pageProps?.tvshows || data?.pageProps?.series || [];
+  if (!series.length) return 0;
+
+  const CONCURRENCY = 4;
+  const hdSeries = [];
+  for (let i = 0; i < series.length; i += CONCURRENCY) {
+    const batch = series.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(batch.map(s => checkPoseidonSerieHD(s)));
+    results.forEach(r => { if (r.status === 'fulfilled' && r.value) hdSeries.push(r.value); });
+  }
+
+  if (hdSeries.length) await dbUpsert('series', hdSeries, 'titulo');
+  return hdSeries.length;
+}
+
+// ── PelisJuanita parsers ──────────────────────────────────────────────────────
 function parseMoviePage(html) {
   if (!html) return null;
   const sinopsisMatch = html.match(/<p class="sinopsis">([^<]+)<\/p>/);
@@ -97,7 +265,6 @@ function parseSeriesInfoPage(html) {
   return { sinopsis, genero: generos.join(', ') };
 }
 
-// ── Enrich Películas ──────────────────────────────────────────────────────────
 async function enrichPeliculas(batch) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/peliculas?genero=eq.&plataforma=eq.PelisJuanita&select=titulo,link_reproduccion&limit=${batch}&order=created_at.asc`,
@@ -119,7 +286,6 @@ async function enrichPeliculas(batch) {
   return enriched;
 }
 
-// ── Enrich Series ─────────────────────────────────────────────────────────────
 async function enrichSeries(batch) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/series?genero=eq.&plataforma=eq.PelisJuanita&select=titulo&limit=${batch}&order=created_at.asc`,
@@ -139,41 +305,29 @@ async function enrichSeries(batch) {
   return enriched;
 }
 
-// ── Enrich Anime (usa slug guardado en DB) ────────────────────────────────────
 async function enrichAnime(batch) {
-  // Solo enriquece animes que tienen slug guardado y sinopsis vacía
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/anime?sinopsis=eq.&slug=neq.&select=titulo,slug&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const animes = await res.json();
   if (!Array.isArray(animes) || !animes.length) return 0;
-
   let enriched = 0;
   for (const anime of animes) {
     if (!anime.slug) continue;
     const html = await fetchPage(`https://www3.animeflv.net/anime/${anime.slug}`);
-
     if (!html || !html.includes('class="Nvgnrs"')) {
       await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, { sinopsis: '-' });
       continue;
     }
-
-    // Géneros desde <nav class="Nvgnrs">
     const nvgnrsMatch = html.match(/<nav class="Nvgnrs">([\s\S]*?)<\/nav>/);
     const generos = [];
     if (nvgnrsMatch) {
       const genMatches = [...nvgnrsMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)];
-      genMatches.forEach(m => {
-        const g = decodeHtmlEntities(m[1]);
-        if (g && g.length > 1) generos.push(g);
-      });
+      genMatches.forEach(m => { const g = decodeHtmlEntities(m[1]); if (g && g.length > 1) generos.push(g); });
     }
-
-    // Sinopsis desde <div class="Description"><p>
     const descMatch = html.match(/<div class="Description">\s*<p>([\s\S]*?)<\/p>/);
     const sinopsis = descMatch ? decodeHtmlEntities(descMatch[1].replace(/<[^>]+>/g, ' ')) : '-';
-
     await dbUpdate('anime', `titulo=eq.${encodeURIComponent(anime.titulo)}`, {
       genero: generos.length ? generos.join(', ') : 'Anime',
       sinopsis: sinopsis || '-'
@@ -183,7 +337,7 @@ async function enrichAnime(batch) {
   return enriched;
 }
 
-// ── PelisJuanita: Películas ──────────────────────────────────────────────────
+// ── PelisJuanita movies/series ────────────────────────────────────────────────
 function parseMoviesPage(html) {
   if (!html) return [];
   const movies = [];
@@ -210,7 +364,6 @@ async function scrapeJuanitaMovies(page) {
   return parseMoviesPage(await fetchPage(`${JUANITA_BASE}/movies/movies.php?populares=1&page=${page}`));
 }
 
-// ── PelisJuanita: Series ─────────────────────────────────────────────────────
 function parseSeriesPage(html) {
   if (!html) return [];
   const series = [];
@@ -273,7 +426,7 @@ async function scrapeJuanitaSeriesEstrenos(page) {
   return parseSeriesPage(await fetchPage(url));
 }
 
-// ── AnimeFLV paginado — ahora guarda el slug ──────────────────────────────────
+// ── AnimeFLV ──────────────────────────────────────────────────────────────────
 async function scrapeAnimeFLVPage(page) {
   const animes = [];
   const seen = new Set();
@@ -291,24 +444,13 @@ async function scrapeAnimeFLVPage(page) {
     const h3Match = block.match(/<h3[^>]*>([^<]+)<\/h3>/);
     const titulo = (altMatch?.[1] || h3Match?.[1] || slug).trim();
     if (!titulo || titulo === 'AnimeFLV') continue;
-    animes.push({
-      titulo,
-      slug,          // ← slug real de AnimeFLV
-      plataforma: 'AnimeFLV',
-      poster_url: posterMatch?.[1] || '',
-      episodios: {},
-      temporadas: 1,
-      ultimo_episodio: 0,
-      genero: 'Anime',
-      sinopsis: '',
-      anio: ''
-    });
+    animes.push({ titulo, slug, plataforma: 'AnimeFLV', poster_url: posterMatch?.[1] || '', episodios: {}, temporadas: 1, ultimo_episodio: 0, genero: 'Anime', sinopsis: '', anio: '' });
   }
   if (animes.length) await dbUpsert('anime', animes, 'titulo');
   return animes.length;
 }
 
-// ── Pelota Libre ─────────────────────────────────────────────────────────────
+// ── Pelota Libre ──────────────────────────────────────────────────────────────
 async function scrapePelotaLibre() {
   const canales = [
     { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: '', link_stream: 'https://pelotalibretv.su/tyc-sports/' },
@@ -354,44 +496,62 @@ export default async function handler(req) {
     if (source === 'delete-poseidon') {
       logs.push(`Borradas: pelis=${await dbDelete('peliculas','plataforma','PoseidonHD')} series=${await dbDelete('series','plataforma','PoseidonHD')}`);
     }
+
+    // PelisJuanita
     if (source === 'peliculas') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const peliculas = await scrapeJuanitaMovies(page);
-      if (peliculas.length) { await dbUpsert('peliculas', peliculas, 'titulo'); logs.push(`Películas pág ${page}: ${peliculas.length} guardadas`); }
-      else logs.push(`Películas pág ${page}: 0 encontradas`);
+      if (peliculas.length) { await dbUpsert('peliculas', peliculas, 'titulo'); logs.push(`Películas Juanita pág ${page}: ${peliculas.length} guardadas`); }
+      else logs.push(`Películas Juanita pág ${page}: 0 encontradas`);
     }
     if (source === 'series') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeries(page);
-      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series pág ${page}: ${series.length} guardadas`); }
-      else logs.push(`Series pág ${page}: 0 encontradas`);
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Juanita pág ${page}: ${series.length} guardadas`); }
+      else logs.push(`Series Juanita pág ${page}: 0 encontradas`);
     }
     if (source === 'serie-info') {
       const nombre = url.searchParams.get('nombre') || '';
       if (!nombre) logs.push('Falta ?nombre=');
       else {
         const info = await scrapeJuanitaSerieInfo(nombre);
-        if (info) { await dbUpsert('series', [{ titulo: nombre, ...info, plataforma: 'PelisJuanita' }], 'titulo'); logs.push(`Serie "${nombre}": ${info.temporadas} temp, ${info.ultimo_episodio} eps`); }
+        if (info) { await dbUpsert('series', [{ titulo: nombre, ...info, plataforma: 'PelisJuanita' }], 'titulo'); logs.push(`Serie "${nombre}": OK`); }
         else logs.push(`Serie "${nombre}": no encontrada`);
       }
     }
     if (source === 'series-populares') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesPopulares(page);
-      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Populares pág ${page}: ${series.length} guardadas`); }
-      else logs.push(`Series Populares pág ${page}: 0 encontradas`);
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Populares pág ${page}: ${series.length}`); }
+      else logs.push(`Series Populares pág ${page}: 0`);
     }
     if (source === 'series-estrenos') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const series = await scrapeJuanitaSeriesEstrenos(page);
-      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Estrenos pág ${page}: ${series.length} guardadas`); }
-      else logs.push(`Series Estrenos pág ${page}: 0 encontradas`);
+      if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Estrenos pág ${page}: ${series.length}`); }
+      else logs.push(`Series Estrenos pág ${page}: 0`);
     }
+
+    // PoseidonHD2
+    if (source === 'poseidon-peliculas') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const count = await scrapePoseidonMovies(page);
+      logs.push(`PoseidonHD Películas pág ${page}: ${count} guardadas`);
+    }
+    if (source === 'poseidon-series') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const count = await scrapePoseidonSeries(page);
+      logs.push(`PoseidonHD Series pág ${page}: ${count} guardadas`);
+    }
+
+    // AnimeFLV
     if (source === 'anime') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapeAnimeFLVPage(page);
       logs.push(`AnimeFLV pág ${page}: ${count} animes guardados`);
     }
+
+    // Enriquecimiento
     if (source === 'enrich-peliculas') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichPeliculas(batch);
@@ -407,6 +567,7 @@ export default async function handler(req) {
       const count = await enrichAnime(batch);
       logs.push(`Enrich anime: ${count} enriquecidos`);
     }
+
     if (source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
     }
