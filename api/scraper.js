@@ -235,94 +235,38 @@ async function scrapePoseidonSeries(page) {
 }
 
 // ── JKAnime (solo metadatos, sin episodios) ───────────────────────────────────
-// Páginas del directorio: https://jkanime.net/directorio/?orden=titulo&page=N
-// Cada página tiene ~24 slugs de anime
-// Por cada slug visitamos la página individual para extraer metadatos del HTML
-const JKANIME_SKIP = new Set([
-  'directorio','horario','top','estrenos','comunidad','historial',
-  'guardado','buscar','aplicacion','genero','temporada','studio',
-  'usuario','notificaciones','dash','salir','ajax','api'
-]);
+// El directorio embebe los datos como JSON en la variable `animes` del HTML.
+// Paginación: ?p=N (30 animes por página, 157 páginas = ~4.700 animes)
 
 async function scrapeJKAnimePage(page) {
-  const url = `${JKANIME_BASE}/directorio/?orden=titulo&page=${page}`;
+  // Los datos del directorio están embebidos como JSON en el HTML:
+  // var animes = {"current_page":1,"data":[{"id":...,"title":...,"slug":...},...]}
+  // La paginación usa ?p=N (no ?page=N)
+  const url = `${JKANIME_BASE}/directorio?orden=titulo&page=1&p=${page}`;
   const html = await fetchWithTimeout(url, 8000);
   if (!html) return 0;
 
-  // Extraer slugs únicos del directorio
-  const slugs = new Set();
-  const linkRegex = /href="https:\/\/jkanime\.net\/([a-zA-Z0-9][a-zA-Z0-9\-]*)\/"/g;
-  let m;
-  while ((m = linkRegex.exec(html)) !== null) {
-    const slug = m[1];
-    if (!JKANIME_SKIP.has(slug)) slugs.add(slug);
-  }
+  const match = html.match(/var animes\s*=\s*(\{[\s\S]*?\});\s*\n/);
+  if (!match) return 0;
 
-  if (!slugs.size) return 0;
+  let data;
+  try { data = JSON.parse(match[1]); } catch { return 0; }
 
-  // Procesar en batches de 3 para no saturar el servidor
-  const CONCURRENCY = 3;
-  const slugArr = [...slugs];
-  const results = [];
+  const items = data?.data || [];
+  if (!items.length) return 0;
 
-  for (let i = 0; i < slugArr.length; i += CONCURRENCY) {
-    const batch = slugArr.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.allSettled(batch.map(async (slug) => {
-      const animeHtml = await fetchWithTimeout(`${JKANIME_BASE}/${slug}/`, 8000);
-      if (!animeHtml) return null;
-
-      // Verificar que es una página de anime válida
-      if (!animeHtml.includes('data-anime=')) return null;
-
-      // Título
-      const titleMatch = animeHtml.match(/<h3>([^<]+)<\/h3>/);
-      const titulo = titleMatch?.[1]?.trim();
-      if (!titulo) return null;
-
-      // Sinopsis
-      const sinopsisMatch = animeHtml.match(/<p class="scroll">([^<]+)<\/p>/);
-      const sinopsis = sinopsisMatch?.[1]?.trim() || '';
-
-      // Géneros (de los links de género en la página)
-      const generos = [];
-      const generoRegex = /href="https:\/\/jkanime\.net\/genero\/[^"]+">([^<]+)<\/a>/g;
-      let gm;
-      while ((gm = generoRegex.exec(animeHtml)) !== null) {
-        const g = gm[1].trim();
-        if (g && !generos.includes(g)) generos.push(g);
-      }
-
-      // Poster (og:image es el más confiable)
-      const posterMatch = animeHtml.match(/property="og:image"\s+content="([^"]+)"/);
-      const poster_url = posterMatch?.[1] ||
-        `https://cdn.jkdesa.com/assets/images/animes/image/${slug}.jpg`;
-
-      // Año de emisión
-      const yearMatch = animeHtml.match(/Emitido.*?(\d{4})/s);
-      const anio = yearMatch?.[1] || '';
-
-      // Total episodios (para ultimo_episodio aproximado)
-      const epMatch = animeHtml.match(/<li><span>Episodios:<\/span>\s*(\d+)<\/li>/);
-      const totalEps = epMatch ? parseInt(epMatch[1]) : 0;
-
-      return {
-        titulo,
-        slug,
-        anio,
-        genero: generos.slice(0, 5).join(', '),
-        sinopsis,
-        poster_url,
-        plataforma: 'JKAnime',
-        temporadas: 1,
-        ultimo_episodio: totalEps,
-        episodios: {}
-      };
-    }));
-
-    for (const r of batchResults) {
-      if (r.status === 'fulfilled' && r.value) results.push(r.value);
-    }
-  }
+  const results = items.map(item => ({
+    titulo:          item.title    || '',
+    slug:            item.slug     || '',
+    anio:            '',
+    genero:          'Anime',
+    sinopsis:        item.synopsis || '',
+    poster_url:      item.image    || '',
+    plataforma:      'JKAnime',
+    temporadas:      1,
+    ultimo_episodio: 0,
+    episodios:       {}
+  })).filter(r => r.titulo && r.slug);
 
   if (results.length) await dbUpsert('anime', results, 'titulo');
   return results.length;
