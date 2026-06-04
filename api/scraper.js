@@ -5,6 +5,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SECRET = 'cinetra-scraper-2024';
 const JUANITA_BASE = 'https://pelisjuanita.com';
 const POSEIDON_BASE = 'https://www.poseidonhd2.co';
+const JKANIME_BASE = 'https://jkanime.net';
 
 async function dbUpsert(table, data, conflict) {
   if (!data?.length) return true;
@@ -99,7 +100,6 @@ function formatRuntime(mins) {
 }
 
 function isHD(videos) {
-  // Checks if any video has HD quality (not CAM)
   const all = [
     ...(videos?.latino || []),
     ...(videos?.spanish || []),
@@ -152,7 +152,6 @@ function poseidonSerieToDb(s) {
 }
 
 async function checkPoseidonMovieHD(movie) {
-  // Visits individual movie page and returns db object only if HD quality exists
   const slugParts = movie.url?.slug?.split('/') || [];
   const id = slugParts[1] || movie.TMDbId || '';
   const slugName = slugParts[2] || '';
@@ -164,7 +163,7 @@ async function checkPoseidonMovieHD(movie) {
 
   const videos = nextData?.props?.pageProps?.thisMovie?.videos;
   if (!videos) return null;
-  if (!isHD(videos)) return null; // Skip CAM-only
+  if (!isHD(videos)) return null;
 
   return poseidonMovieToDb(movie);
 }
@@ -199,7 +198,6 @@ async function scrapePoseidonMovies(page) {
   const movies = data?.pageProps?.movies || [];
   if (!movies.length) return 0;
 
-  // Process in parallel batches of 4 to stay within timeout
   const CONCURRENCY = 4;
   const hdMovies = [];
   for (let i = 0; i < movies.length; i += CONCURRENCY) {
@@ -234,6 +232,100 @@ async function scrapePoseidonSeries(page) {
 
   if (hdSeries.length) await dbUpsert('series', hdSeries, 'titulo');
   return hdSeries.length;
+}
+
+// ── JKAnime (solo metadatos, sin episodios) ───────────────────────────────────
+// Páginas del directorio: https://jkanime.net/directorio/?orden=titulo&page=N
+// Cada página tiene ~24 slugs de anime
+// Por cada slug visitamos la página individual para extraer metadatos del HTML
+const JKANIME_SKIP = new Set([
+  'directorio','horario','top','estrenos','comunidad','historial',
+  'guardado','buscar','aplicacion','genero','temporada','studio',
+  'usuario','notificaciones','dash','salir','ajax','api'
+]);
+
+async function scrapeJKAnimePage(page) {
+  const url = `${JKANIME_BASE}/directorio/?orden=titulo&page=${page}`;
+  const html = await fetchWithTimeout(url, 8000);
+  if (!html) return 0;
+
+  // Extraer slugs únicos del directorio
+  const slugs = new Set();
+  const linkRegex = /href="https:\/\/jkanime\.net\/([a-zA-Z0-9][a-zA-Z0-9\-]*)\/"/g;
+  let m;
+  while ((m = linkRegex.exec(html)) !== null) {
+    const slug = m[1];
+    if (!JKANIME_SKIP.has(slug)) slugs.add(slug);
+  }
+
+  if (!slugs.size) return 0;
+
+  // Procesar en batches de 3 para no saturar el servidor
+  const CONCURRENCY = 3;
+  const slugArr = [...slugs];
+  const results = [];
+
+  for (let i = 0; i < slugArr.length; i += CONCURRENCY) {
+    const batch = slugArr.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.allSettled(batch.map(async (slug) => {
+      const animeHtml = await fetchWithTimeout(`${JKANIME_BASE}/${slug}/`, 8000);
+      if (!animeHtml) return null;
+
+      // Verificar que es una página de anime válida
+      if (!animeHtml.includes('data-anime=')) return null;
+
+      // Título
+      const titleMatch = animeHtml.match(/<h3>([^<]+)<\/h3>/);
+      const titulo = titleMatch?.[1]?.trim();
+      if (!titulo) return null;
+
+      // Sinopsis
+      const sinopsisMatch = animeHtml.match(/<p class="scroll">([^<]+)<\/p>/);
+      const sinopsis = sinopsisMatch?.[1]?.trim() || '';
+
+      // Géneros (de los links de género en la página)
+      const generos = [];
+      const generoRegex = /href="https:\/\/jkanime\.net\/genero\/[^"]+">([^<]+)<\/a>/g;
+      let gm;
+      while ((gm = generoRegex.exec(animeHtml)) !== null) {
+        const g = gm[1].trim();
+        if (g && !generos.includes(g)) generos.push(g);
+      }
+
+      // Poster (og:image es el más confiable)
+      const posterMatch = animeHtml.match(/property="og:image"\s+content="([^"]+)"/);
+      const poster_url = posterMatch?.[1] ||
+        `https://cdn.jkdesa.com/assets/images/animes/image/${slug}.jpg`;
+
+      // Año de emisión
+      const yearMatch = animeHtml.match(/Emitido.*?(\d{4})/s);
+      const anio = yearMatch?.[1] || '';
+
+      // Total episodios (para ultimo_episodio aproximado)
+      const epMatch = animeHtml.match(/<li><span>Episodios:<\/span>\s*(\d+)<\/li>/);
+      const totalEps = epMatch ? parseInt(epMatch[1]) : 0;
+
+      return {
+        titulo,
+        slug,
+        anio,
+        genero: generos.slice(0, 5).join(', '),
+        sinopsis,
+        poster_url,
+        plataforma: 'JKAnime',
+        temporadas: 1,
+        ultimo_episodio: totalEps,
+        episodios: {}
+      };
+    }));
+
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled' && r.value) results.push(r.value);
+    }
+  }
+
+  if (results.length) await dbUpsert('anime', results, 'titulo');
+  return results.length;
 }
 
 // ── PelisJuanita parsers ──────────────────────────────────────────────────────
@@ -549,6 +641,13 @@ export default async function handler(req) {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapeAnimeFLVPage(page);
       logs.push(`AnimeFLV pág ${page}: ${count} animes guardados`);
+    }
+
+    // JKAnime (solo metadatos)
+    if (source === 'jkanime') {
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const count = await scrapeJKAnimePage(page);
+      logs.push(`JKAnime pág ${page}: ${count} animes guardados`);
     }
 
     // Enriquecimiento
