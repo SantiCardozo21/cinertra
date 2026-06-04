@@ -1,7 +1,7 @@
 export const config = { runtime: 'edge' };
 
 const SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODg5NjcxNiwiZXhwIjoyMDk0NDcyNzE2fQ.FUBJ-ZVeRWq9QTfN5V-xOIdU_tjMEWIPgV_hvndXiiM';
 const SECRET = 'cinetra-scraper-2024';
 const JUANITA_BASE = 'https://pelisjuanita.com';
 const POSEIDON_BASE = 'https://www.poseidonhd2.co';
