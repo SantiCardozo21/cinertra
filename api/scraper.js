@@ -239,9 +239,6 @@ async function scrapePoseidonSeries(page) {
 // Paginación: ?p=N (30 animes por página, 157 páginas = ~4.700 animes)
 
 async function scrapeJKAnimePage(page) {
-  // Los datos del directorio están embebidos como JSON en el HTML:
-  // var animes = {"current_page":1,"data":[{"id":...,"title":...,"slug":...},...]}
-  // La paginación usa ?p=N (no ?page=N)
   const url = `${JKANIME_BASE}/directorio?orden=titulo&page=1&p=${page}`;
   const html = await fetchWithTimeout(url, 8000);
   if (!html) return 0;
@@ -488,6 +485,12 @@ async function scrapeAnimeFLVPage(page) {
 
 // ── Pelota Libre ──────────────────────────────────────────────────────────────
 async function scrapePelotaLibre() {
+  // Limpiar partidos viejos antes de insertar los nuevos
+  await fetch(`${SUPABASE_URL}/rest/v1/partidos?id=neq.00000000-0000-0000-0000-000000000000`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+
   const canales = [
     { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: '', link_stream: 'https://pelotalibretv.su/tyc-sports/' },
     { nombre: 'ESPN',           siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-1/' },
