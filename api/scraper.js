@@ -29,7 +29,7 @@ async function dbUpdate(table, match, data) {
 async function dbDelete(table, column, value) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
     method: 'DELETE',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
   });
   return res.ok;
 }
@@ -156,15 +156,11 @@ async function checkPoseidonMovieHD(movie) {
   const id = slugParts[1] || movie.TMDbId || '';
   const slugName = slugParts[2] || '';
   if (!id) return null;
-
   const html = await fetchWithTimeout(`${POSEIDON_BASE}/pelicula/${id}/${slugName}`, 5000);
   const nextData = extractNextData(html);
   if (!nextData) return null;
-
   const videos = nextData?.props?.pageProps?.thisMovie?.videos;
-  if (!videos) return null;
-  if (!isHD(videos)) return null;
-
+  if (!videos || !isHD(videos)) return null;
   return poseidonMovieToDb(movie);
 }
 
@@ -173,31 +169,24 @@ async function checkPoseidonSerieHD(serie) {
   const id = slugParts[1] || serie.TMDbId || '';
   const slugName = slugParts[2] || '';
   if (!id) return null;
-
   const html = await fetchWithTimeout(`${POSEIDON_BASE}/serie/${id}/${slugName}`, 5000);
   const nextData = extractNextData(html);
   if (!nextData) return null;
-
   const videos = nextData?.props?.pageProps?.thisTvshow?.videos
               || nextData?.props?.pageProps?.thisMovie?.videos;
-  if (!videos) return null;
-  if (!isHD(videos)) return null;
-
+  if (!videos || !isHD(videos)) return null;
   return poseidonSerieToDb(serie);
 }
 
 async function scrapePoseidonMovies(page) {
   const buildId = await getPoseidonBuildId();
   if (!buildId) return 0;
-
   const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/peliculas.json?page=${page}`);
   if (!raw) return 0;
   let data;
   try { data = JSON.parse(raw); } catch { return 0; }
-
   const movies = data?.pageProps?.movies || [];
   if (!movies.length) return 0;
-
   const CONCURRENCY = 4;
   const hdMovies = [];
   for (let i = 0; i < movies.length; i += CONCURRENCY) {
@@ -205,7 +194,6 @@ async function scrapePoseidonMovies(page) {
     const results = await Promise.allSettled(batch.map(m => checkPoseidonMovieHD(m)));
     results.forEach(r => { if (r.status === 'fulfilled' && r.value) hdMovies.push(r.value); });
   }
-
   if (hdMovies.length) await dbUpsert('peliculas', hdMovies, 'titulo');
   return hdMovies.length;
 }
@@ -213,15 +201,12 @@ async function scrapePoseidonMovies(page) {
 async function scrapePoseidonSeries(page) {
   const buildId = await getPoseidonBuildId();
   if (!buildId) return 0;
-
   const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/series.json?page=${page}`);
   if (!raw) return 0;
   let data;
   try { data = JSON.parse(raw); } catch { return 0; }
-
   const series = data?.pageProps?.tvshows || data?.pageProps?.series || [];
   if (!series.length) return 0;
-
   const CONCURRENCY = 4;
   const hdSeries = [];
   for (let i = 0; i < series.length; i += CONCURRENCY) {
@@ -229,29 +214,21 @@ async function scrapePoseidonSeries(page) {
     const results = await Promise.allSettled(batch.map(s => checkPoseidonSerieHD(s)));
     results.forEach(r => { if (r.status === 'fulfilled' && r.value) hdSeries.push(r.value); });
   }
-
   if (hdSeries.length) await dbUpsert('series', hdSeries, 'titulo');
   return hdSeries.length;
 }
 
-// ── JKAnime (solo metadatos, sin episodios) ───────────────────────────────────
-// El directorio embebe los datos como JSON en la variable `animes` del HTML.
-// Paginación: ?p=N (30 animes por página, 157 páginas = ~4.700 animes)
-
+// ── JKAnime ───────────────────────────────────────────────────────────────────
 async function scrapeJKAnimePage(page) {
   const url = `${JKANIME_BASE}/directorio?orden=titulo&page=1&p=${page}`;
   const html = await fetchWithTimeout(url, 8000);
   if (!html) return 0;
-
   const match = html.match(/var animes\s*=\s*(\{[\s\S]*?\});\s*\n/);
   if (!match) return 0;
-
   let data;
   try { data = JSON.parse(match[1]); } catch { return 0; }
-
   const items = data?.data || [];
   if (!items.length) return 0;
-
   const results = items.map(item => ({
     titulo:          item.title    || '',
     slug:            item.slug     || '',
@@ -264,7 +241,6 @@ async function scrapeJKAnimePage(page) {
     ultimo_episodio: 0,
     episodios:       {}
   })).filter(r => r.titulo && r.slug);
-
   if (results.length) await dbUpsert('anime', results, 'titulo');
   return results.length;
 }
@@ -485,10 +461,14 @@ async function scrapeAnimeFLVPage(page) {
 
 // ── Pelota Libre ──────────────────────────────────────────────────────────────
 async function scrapePelotaLibre() {
-  // Limpiar partidos viejos antes de insertar los nuevos
-  await fetch(`${SUPABASE_URL}/rest/v1/partidos?id=neq.00000000-0000-0000-0000-000000000000`, {
+  // Borrar TODOS los partidos viejos antes de insertar los nuevos
+  const delRes = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
     method: 'DELETE',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=minimal'
+    }
   });
 
   const canales = [
@@ -502,6 +482,7 @@ async function scrapePelotaLibre() {
     { nombre: 'DeporTV',        siglas: 'DEP',  categoria: 'deportes', color: '#1a237e', logo_url: '', link_stream: 'https://pelotalibretv.su/deportv/' },
   ];
   await dbUpsert('canales', canales, 'nombre');
+
   const html = await fetchPage('https://pelotalibretv.su/agenda/');
   const partidos = [];
   if (html) {
@@ -516,7 +497,7 @@ async function scrapePelotaLibre() {
     });
     if (partidos.length) await dbInsert('partidos', partidos);
   }
-  return [`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos`];
+  return [`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos (delete: ${delRes.status})`];
 }
 
 // ── HANDLER ───────────────────────────────────────────────────────────────────
@@ -535,8 +516,6 @@ export default async function handler(req) {
     if (source === 'delete-poseidon') {
       logs.push(`Borradas: pelis=${await dbDelete('peliculas','plataforma','PoseidonHD')} series=${await dbDelete('series','plataforma','PoseidonHD')}`);
     }
-
-    // PelisJuanita
     if (source === 'peliculas') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const peliculas = await scrapeJuanitaMovies(page);
@@ -570,8 +549,6 @@ export default async function handler(req) {
       if (series.length) { await dbUpsert('series', series, 'titulo'); logs.push(`Series Estrenos pág ${page}: ${series.length}`); }
       else logs.push(`Series Estrenos pág ${page}: 0`);
     }
-
-    // PoseidonHD2
     if (source === 'poseidon-peliculas') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapePoseidonMovies(page);
@@ -582,22 +559,16 @@ export default async function handler(req) {
       const count = await scrapePoseidonSeries(page);
       logs.push(`PoseidonHD Series pág ${page}: ${count} guardadas`);
     }
-
-    // AnimeFLV
     if (source === 'anime') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapeAnimeFLVPage(page);
       logs.push(`AnimeFLV pág ${page}: ${count} animes guardados`);
     }
-
-    // JKAnime (solo metadatos)
     if (source === 'jkanime') {
       const page = parseInt(url.searchParams.get('page') || '1');
       const count = await scrapeJKAnimePage(page);
       logs.push(`JKAnime pág ${page}: ${count} animes guardados`);
     }
-
-    // Enriquecimiento
     if (source === 'enrich-peliculas') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichPeliculas(batch);
@@ -613,7 +584,6 @@ export default async function handler(req) {
       const count = await enrichAnime(batch);
       logs.push(`Enrich anime: ${count} enriquecidos`);
     }
-
     if (source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
     }
