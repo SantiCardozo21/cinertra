@@ -708,6 +708,7 @@ export default async function handler(req) {
       }
     }
 
+    if (source === 'delete-partidos') {
       const del = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
