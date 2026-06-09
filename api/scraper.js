@@ -471,36 +471,136 @@ async function scrapePelotaLibre() {
     }
   });
 
+  const CDN = 'https://cdn.pelotalibretv.su/wp-content/uploads/2022/12';
   const canales = [
-    { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: '', link_stream: 'https://pelotalibretv.su/tyc-sports/' },
-    { nombre: 'ESPN',           siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-1/' },
-    { nombre: 'ESPN Premium',   siglas: 'ESPN+',categoria: 'deportes', color: '#cc0000', logo_url: '', link_stream: 'https://pelotalibretv.su/espn-premium/' },
-    { nombre: 'Fox Sports',     siglas: 'FOX',  categoria: 'deportes', color: '#004080', logo_url: '', link_stream: 'https://pelotalibretv.su/fox-sports/' },
-    { nombre: 'TNT Sports',     siglas: 'TNT',  categoria: 'deportes', color: '#7b0000', logo_url: '', link_stream: 'https://pelotalibretv.su/tnt-sports/' },
-    { nombre: 'DirecTV Sports', siglas: 'DTV',  categoria: 'deportes', color: '#0064ff', logo_url: '', link_stream: 'https://pelotalibretv.su/directv-sports/' },
-    { nombre: 'TV Pública',     siglas: 'TVP',  categoria: 'deportes', color: '#006400', logo_url: '', link_stream: 'https://pelotalibretv.su/tv-publica/' },
-    { nombre: 'DeporTV',        siglas: 'DEP',  categoria: 'deportes', color: '#1a237e', logo_url: '', link_stream: 'https://pelotalibretv.su/deportv/' },
+    { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: `${CDN}/tyc-e1671629028653.jpg`,                              link_stream: 'https://pelotalibretv.su/tyc-sports/' },
+    { nombre: 'ESPN',           siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: `${CDN}/imgonline-com-ua-resize-nCeSNh07YHyhg-1.jpg`,          link_stream: 'https://pelotalibretv.su/espn-1/' },
+    { nombre: 'ESPN Premium',   siglas: 'ESP+', categoria: 'deportes', color: '#cc0000', logo_url: `${CDN}/ESPN_Premium-1-e1671629245648.png`,                    link_stream: 'https://pelotalibretv.su/espn-premium/' },
+    { nombre: 'Fox Sports',     siglas: 'FOX',  categoria: 'deportes', color: '#004080', logo_url: `${CDN}/Fox_Sports-e1671629328815.png`,                        link_stream: 'https://pelotalibretv.su/fox-sports/' },
+    { nombre: 'TNT Sports',     siglas: 'TNT',  categoria: 'deportes', color: '#7b0000', logo_url: `${CDN}/TNT_Sports-e1671628894478.png`,                        link_stream: 'https://pelotalibretv.su/tnt-sports/' },
+    { nombre: 'DirecTV Sports', siglas: 'DTV',  categoria: 'deportes', color: '#0064ff', logo_url: `${CDN}/DirecTV_Sports.png`,                                   link_stream: 'https://pelotalibretv.su/directv-sports/' },
+    { nombre: 'TV Pública',     siglas: 'TVP',  categoria: 'deportes', color: '#006400', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/TV_P%C3%BAblica_Argentina.svg/200px-TV_P%C3%BAblica_Argentina.svg.png', link_stream: 'https://pelotalibretv.su/tv-publica/' },
+    { nombre: 'DeporTV',        siglas: 'DEP',  categoria: 'deportes', color: '#1a237e', logo_url: `${CDN}/DeporTV-e1671629412883.png`,                           link_stream: 'https://pelotalibretv.su/deportv/' },
   ];
-  await dbUpsert('canales', canales, 'nombre');
+  // ignore-duplicates: NO toca canales de TV en vivo que ya existen con el mismo nombre
+  await fetch(`${SUPABASE_URL}/rest/v1/canales?on_conflict=nombre`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify(canales)
+  });
 
   const html = await fetchPage('https://pelotalibretv.su/agenda/');
   const partidos = [];
   if (html) {
-    const vsMatches = html.match(/([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})\s+(?:vs\.?|VS\.?)\s+([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})/g) || [];
-    const links = [...new Set(html.match(/https:\/\/pelotalibretv\.su\/[a-zA-Z0-9\-\/]+\//g) || [])];
-    vsMatches.slice(0, 20).forEach((vs, i) => {
-      const m = vs.match(/(.+?)\s+(?:vs\.?|VS\.?)\s+(.+)/);
-      if (!m) return;
+    // Argentina = UTC-3. Hora actual en Argentina:
+    const nowMs = Date.now();
+    const nowAR = new Date(nowMs - 3 * 3600000);
+    const arY = nowAR.getUTCFullYear();
+    const arM = nowAR.getUTCMonth();
+    const arD = nowAR.getUTCDate();
+
+    const vsRegex = /([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})\s+(?:vs\.?|VS\.?)\s+([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})/g;
+    const seen = new Set();
+    let m;
+
+    while ((m = vsRegex.exec(html)) !== null && partidos.length < 20) {
       const local = m[1].trim(), visit = m[2].trim();
-      if (local.length < 2 || visit.length < 2) return;
-      partidos.push({ equipo_local: local, equipo_visit: visit, sigla_local: local.substring(0,3).toUpperCase(), sigla_visit: visit.substring(0,3).toUpperCase(), color_local: '#1565c0', color_visit: '#c62828', fecha: new Date().toISOString(), en_vivo: false, proveedores: ['tyc'], link_tyc: links[i] || 'https://pelotalibretv.su' });
-    });
+      if (local.length < 2 || visit.length < 2) continue;
+      const key = `${local.toLowerCase()}-${visit.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // Buscar HH:MM en el contexto cercano (~400 chars antes del partido)
+      const ctx = html.substring(Math.max(0, m.index - 400), m.index + 100);
+      const tMatch = ctx.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+
+      let fecha;
+      if (tMatch) {
+        const mH = parseInt(tMatch[1]);
+        const mMin = parseInt(tMatch[2]);
+        // Hora AR → UTC (AR = UTC-3, UTC = AR + 3h)
+        let matchUTC = new Date(Date.UTC(arY, arM, arD, mH + 3, mMin));
+        // Si el partido quedó más de 4h en el pasado, es mañana
+        if (nowMs - matchUTC.getTime() > 4 * 3600000) {
+          matchUTC = new Date(matchUTC.getTime() + 24 * 3600000);
+        }
+        fecha = matchUTC.toISOString();
+      } else {
+        fecha = new Date().toISOString();
+      }
+
+      partidos.push({
+        equipo_local: local, equipo_visit: visit,
+        sigla_local: local.substring(0,3).toUpperCase(),
+        sigla_visit: visit.substring(0,3).toUpperCase(),
+        color_local: '#1565c0', color_visit: '#c62828',
+        fecha, en_vivo: false,
+        proveedores: ['tyc'], link_tyc: 'https://pelotalibretv.su'
+      });
+    }
     if (partidos.length) await dbInsert('partidos', partidos);
   }
-  return [`PelotaLibre: ${canales.length} canales, ${partidos.length} partidos (delete: ${delRes.status})`];
+  return [`PelotaLibre: ${partidos.length} partidos (delete: ${delRes.status})`];
 }
 
-// ── HANDLER ───────────────────────────────────────────────────────────────────
+// ── Enriquecimiento de partidos con canales ───────────────────────────────────
+async function enrichPartidos() {
+  const html = await fetchPage('https://pelotalibretv.su/agenda/');
+  if (!html) return ['PelotaLibre agenda: no disponible'];
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/partidos?select=id,equipo_local,equipo_visit`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const partidos = await res.json();
+  if (!Array.isArray(partidos) || !partidos.length) return ['No hay partidos para enriquecer'];
+
+  const CANAL_MAP = {
+    'TyC Sports':     'https://pelotalibretv.su/tyc-sports/',
+    'ESPN':           'https://pelotalibretv.su/espn-1/',
+    'ESPN Premium':   'https://pelotalibretv.su/espn-premium/',
+    'Fox Sports':     'https://pelotalibretv.su/fox-sports/',
+    'TNT Sports':     'https://pelotalibretv.su/tnt-sports/',
+    'DirecTV Sports': 'https://pelotalibretv.su/directv-sports/',
+    'TV Pública':     'https://pelotalibretv.su/tv-publica/',
+    'DeporTV':        'https://pelotalibretv.su/deportv/',
+  };
+
+  let enriched = 0;
+  const htmlLow = html.toLowerCase();
+
+  for (const partido of partidos) {
+    const localLow = partido.equipo_local.toLowerCase().trim();
+    const idx = htmlLow.indexOf(localLow);
+    if (idx < 0) continue;
+
+    // Bloque de texto alrededor del partido (~800 chars después del equipo local)
+    const block = html.substring(Math.max(0, idx - 150), Math.min(html.length, idx + 800));
+    const blockLow = block.toLowerCase();
+
+    const proveedores = [];
+    let primaryLink = null;
+
+    for (const [nombre, url] of Object.entries(CANAL_MAP)) {
+      const slug = url.replace('https://pelotalibretv.su/', '').replace('/', '');
+      if (blockLow.includes(nombre.toLowerCase()) || block.includes(slug)) {
+        proveedores.push(nombre);
+        if (!primaryLink) primaryLink = url;
+      }
+    }
+
+    if (proveedores.length > 0) {
+      await fetch(`${SUPABASE_URL}/rest/v1/partidos?id=eq.${partido.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ proveedores, link_tyc: primaryLink })
+      });
+      enriched++;
+    }
+  }
+  return [`Partidos enriquecidos: ${enriched}/${partidos.length}`];
+}
+
+
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
 
 export default async function handler(req) {
@@ -584,8 +684,18 @@ export default async function handler(req) {
       const count = await enrichAnime(batch);
       logs.push(`Enrich anime: ${count} enriquecidos`);
     }
+    if (source === 'delete-partidos') {
+      const del = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
+      });
+      logs.push(`Partidos borrados (status: ${del.status})`);
+    }
     if (source === 'futbol') {
       logs.push(...await scrapePelotaLibre());
+    }
+    if (source === 'enrich-partidos') {
+      logs.push(...await enrichPartidos());
     }
   } catch (e) {
     logs.push(`Error: ${e.message}`);
