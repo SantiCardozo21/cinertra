@@ -511,7 +511,7 @@ async function scrapePelotaLibre() {
       seen.add(key);
 
       // Buscar HH:MM en el contexto cercano (~400 chars antes del partido)
-      const ctx = html.substring(Math.max(0, m.index - 400), m.index + 100);
+      const ctx = html.substring(Math.max(0, m.index - 400), Math.min(html.length, m.index + 400));
       const tMatch = ctx.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
 
       let fecha;
@@ -683,29 +683,6 @@ export default async function handler(req) {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichAnime(batch);
       logs.push(`Enrich anime: ${count} enriquecidos`);
-    }
-    if (source === 'debug-partidos') {
-      const html = await fetchPage('https://pelotalibretv.su/agenda/');
-      if (!html) { logs.push('No se pudo cargar la agenda'); }
-      else {
-        const vsRegex = /([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})\s+(?:vs\.?|VS\.?)\s+([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})/g;
-        let m, count = 0;
-        while ((m = vsRegex.exec(html)) !== null && count < 10) {
-          count++;
-          const local = m[1].trim(), visit = m[2].trim();
-          // Buscar tiempo ANTES y DESPUÉS del partido
-          const ctxBefore = html.substring(Math.max(0, m.index - 400), m.index);
-          const ctxAfter  = html.substring(m.index, Math.min(html.length, m.index + 400));
-          const tBefore = ctxBefore.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g);
-          const tAfter  = ctxAfter.match( /\b([01]?\d|2[0-3]):([0-5]\d)\b/g);
-          logs.push(`${local} vs ${visit}`);
-          logs.push(`  antes: ${JSON.stringify(tBefore)} | despues: ${JSON.stringify(tAfter)}`);
-          // Mostrar 80 chars de contexto HTML
-          const rawCtx = html.substring(Math.max(0, m.index - 100), m.index + 100).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-          logs.push(`  html: ...${rawCtx}...`);
-        }
-        if (count === 0) logs.push('No se encontraron partidos "vs" en la página');
-      }
     }
 
     if (source === 'delete-partidos') {
