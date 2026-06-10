@@ -70,7 +70,7 @@ function decodeHtmlEntities(str) {
     .replace(/\s+/g,' ').trim();
 }
 
-// ── PoseidonHD2 ───────────────────────────────────────────────────────────────
+// -- PoseidonHD2 ---------------------------------------------------------------
 async function getPoseidonBuildId() {
   const html = await fetchPage(POSEIDON_BASE);
   if (!html) return null;
@@ -218,7 +218,7 @@ async function scrapePoseidonSeries(page) {
   return hdSeries.length;
 }
 
-// ── JKAnime ───────────────────────────────────────────────────────────────────
+// -- JKAnime -------------------------------------------------------------------
 async function scrapeJKAnimePage(page) {
   const url = `${JKANIME_BASE}/directorio?orden=titulo&page=1&p=${page}`;
   const html = await fetchWithTimeout(url, 8000);
@@ -245,7 +245,7 @@ async function scrapeJKAnimePage(page) {
   return results.length;
 }
 
-// ── PelisJuanita parsers ──────────────────────────────────────────────────────
+// -- PelisJuanita parsers ------------------------------------------------------
 function parseMoviePage(html) {
   if (!html) return null;
   const sinopsisMatch = html.match(/<p class="sinopsis">([^<]+)<\/p>/);
@@ -346,7 +346,7 @@ async function enrichAnime(batch) {
   return enriched;
 }
 
-// ── PelisJuanita movies/series ────────────────────────────────────────────────
+// -- PelisJuanita movies/series ------------------------------------------------
 function parseMoviesPage(html) {
   if (!html) return [];
   const movies = [];
@@ -435,7 +435,7 @@ async function scrapeJuanitaSeriesEstrenos(page) {
   return parseSeriesPage(await fetchPage(url));
 }
 
-// ── AnimeFLV ──────────────────────────────────────────────────────────────────
+// -- AnimeFLV ------------------------------------------------------------------
 async function scrapeAnimeFLVPage(page) {
   const animes = [];
   const seen = new Set();
@@ -459,7 +459,7 @@ async function scrapeAnimeFLVPage(page) {
   return animes.length;
 }
 
-// ── Pelota Libre ──────────────────────────────────────────────────────────────
+// -- Pelota Libre --------------------------------------------------------------
 async function scrapePelotaLibre() {
   // Borrar TODOS los partidos viejos antes de insertar los nuevos
   const delRes = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
@@ -518,7 +518,7 @@ async function scrapePelotaLibre() {
       if (tMatch) {
         const mH = parseInt(tMatch[1]);
         const mMin = parseInt(tMatch[2]);
-        // Hora AR → UTC (AR = UTC-3, UTC = AR + 3h)
+        // Hora AR -> UTC (AR = UTC-3, UTC = AR + 3h)
         let matchUTC = new Date(Date.UTC(arY, arM, arD, mH + 3, mMin));
         // Si el partido quedó más de 4h en el pasado, es mañana
         if (nowMs - matchUTC.getTime() > 4 * 3600000) {
@@ -543,7 +543,7 @@ async function scrapePelotaLibre() {
   return [`PelotaLibre: ${partidos.length} partidos (delete: ${delRes.status})`];
 }
 
-// ── Enriquecimiento de partidos con canales ───────────────────────────────────
+// -- Enriquecimiento de partidos con canales -----------------------------------
 async function enrichPartidos() {
   const html = await fetchPage('https://pelotalibretv.su/agenda/');
   if (!html) return ['PelotaLibre agenda: no disponible'];
