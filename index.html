@@ -795,7 +795,7 @@ function matchBigHTML(p) {
   var statusBadge = isLive ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>' : isSoon ? '<div class="match-status-badge soon">EN BREVE</div>' : '<div class="match-status-badge next">PROXIMO</div>';
   var canalesCount = (p.canales||[]).length;
   var canalesHint = canalesCount ? '<div class="match-canales-hint">'+canalesCount+' canal'+(canalesCount>1?' disponibles':' disponible')+'</div>' : '<div class="match-canales-hint" style="color:#333;">Sin canales</div>';
-  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" data-id="'+p.id+'" onclick="openPartidoModal(this.dataset.id)" tabindex="0">'++
+  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" data-id="'+p.id+'" onclick="openPartidoModal(this.dataset.id)" tabindex="0">'+
     '<div class="match-status-bar">'+statusBadge+'<div class="match-hora">'+(isLive?'LIVE':hora)+'</div></div>'+
     '<div class="match-teams-big">'+
     '<div class="match-team"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_local+'</div></div>'+
