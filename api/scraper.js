@@ -56,7 +56,7 @@ async function fetchPage(url) {
     });
     if (!res.ok) return null;
     return await res.text();
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 
 function decodeHtmlEntities(str) {
@@ -89,7 +89,7 @@ async function fetchWithTimeout(url, ms = 5000) {
     clearTimeout(t);
     if (!res.ok) return null;
     return await res.text();
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 
 function formatRuntime(mins) {
@@ -113,7 +113,7 @@ function extractNextData(html) {
   if (!html) return null;
   const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if (!match) return null;
-  try { return JSON.parse(match[1]); } catch { return null; }
+  try { return JSON.parse(match[1]); } catch (_e) { return null; }
 }
 
 function poseidonMovieToDb(m) {
@@ -184,7 +184,7 @@ async function scrapePoseidonMovies(page) {
   const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/peliculas.json?page=${page}`);
   if (!raw) return 0;
   let data;
-  try { data = JSON.parse(raw); } catch { return 0; }
+  try { data = JSON.parse(raw); } catch (_e) { return 0; }
   const movies = data?.pageProps?.movies || [];
   if (!movies.length) return 0;
   const CONCURRENCY = 4;
@@ -204,7 +204,7 @@ async function scrapePoseidonSeries(page) {
   const raw = await fetchPage(`${POSEIDON_BASE}/_next/data/${buildId}/es/series.json?page=${page}`);
   if (!raw) return 0;
   let data;
-  try { data = JSON.parse(raw); } catch { return 0; }
+  try { data = JSON.parse(raw); } catch (_e) { return 0; }
   const series = data?.pageProps?.tvshows || data?.pageProps?.series || [];
   if (!series.length) return 0;
   const CONCURRENCY = 4;
@@ -226,7 +226,7 @@ async function scrapeJKAnimePage(page) {
   const match = html.match(/var animes\s*=\s*(\{[\s\S]*?\});\s*\n/);
   if (!match) return 0;
   let data;
-  try { data = JSON.parse(match[1]); } catch { return 0; }
+  try { data = JSON.parse(match[1]); } catch (_e) { return 0; }
   const items = data?.data || [];
   if (!items.length) return 0;
   const results = items.map(item => ({
