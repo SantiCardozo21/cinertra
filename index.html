@@ -66,7 +66,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .poster{width:92px;height:130px;border-radius:8px;overflow:hidden;position:relative;background:var(--card);}
 .poster img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s;}
 .movie-card:hover .poster img{transform:scale(1.05);}
-.quality-badge{position:absolute;top:6px;right:6px;background:rgba(77,163,255,0.85);color:#fff;font-size:8.5px;padding:2px 5px;border-radius:3px;font-weight:600;}
 .poster-bg{width:100%;height:100%;}
 .movie-title{font-size:11px;color:var(--text2);margin-top:6px;line-height:1.3;font-weight:500;}
 .movie-meta{font-size:10px;color:var(--text4);margin-top:2px;}
@@ -96,7 +95,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .cposter{width:100%;aspect-ratio:2/3;border-radius:8px;overflow:hidden;position:relative;background:var(--card);}
 .cposter img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s;}
 .content-card:hover .cposter img{transform:scale(1.05);}
-/* SEARCH — CAMBIO 1: estilos de foco */
 .searchbar{display:flex;align-items:center;gap:8px;background:var(--card);border:0.5px solid var(--border2);border-radius:8px;padding:9px 14px;cursor:pointer;}
 .searchbar:focus{border-color:var(--accent);outline:none;}
 .searchbar:focus-within{border-color:var(--accent);}
@@ -122,16 +120,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .provs-col{display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
 .prov-tag{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;text-decoration:none;}
 .prov-tag:hover{opacity:0.75;}
-.p-disney{background:#00297a22;color:#4b9fff;border:0.5px solid #00297a55;}
-.p-espn{background:#cc000022;color:#ff6b6b;border:0.5px solid #cc000055;}
-.p-tnt{background:#7b000022;color:#ff5555;border:0.5px solid #7b000055;}
-.p-fox{background:#00408022;color:#4fc3f7;border:0.5px solid #00408055;}
 .p-tyc{background:#1a6e1a22;color:#66bb6a;border:0.5px solid #1a6e1a55;}
-.p-dsports{background:#ff6f0022;color:#ffb74d;border:0.5px solid #ff6f0055;}
-.pf-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:11.5px;cursor:pointer;border:0.5px solid var(--border2);color:var(--text3);background:var(--card);transition:all 0.12s;}
-.pf-btn.active{color:#fff;border-color:#555;background:#2a2a2a;}
-.pf-btn:hover:not(.active){border-color:#444;color:var(--text2);}
-.prov-filter{display:flex;gap:7px;flex-wrap:wrap;}
+.p-espn{background:#cc000022;color:#ff6b6b;border:0.5px solid #cc000055;}
+.p-fox{background:#00408022;color:#4fc3f7;border:0.5px solid #00408055;}
 .plat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
 .plat-card{background:var(--card);border:0.5px solid var(--border2);border-radius:var(--radius);padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.15s;}
 .plat-card:hover{border-color:var(--accent);}
@@ -174,7 +165,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .ep-info{background:var(--card);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border2);}
 .ep-info-label{font-size:10px;color:var(--text4);margin-bottom:3px;}
 .ep-info-title{font-size:12.5px;color:var(--text2);font-weight:500;}
-.ep-info-dur{font-size:10.5px;color:var(--text4);margin-top:2px;}
 .back-btn{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text4);cursor:pointer;width:fit-content;transition:color 0.12s;margin-bottom:4px;}
 .back-btn:hover{color:var(--accent);}
 .canal-player-wrap{display:flex;flex-direction:column;gap:16px;max-width:900px;}
@@ -217,6 +207,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .empty{color:var(--text4);font-size:13px;padding:20px 0;}
+/* PAGINATION */
+.loadmore-btn{display:block;width:100%;padding:12px;background:var(--card);border:0.5px solid var(--border2);border-radius:8px;color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;text-align:center;margin-top:10px;font-family:var(--font);transition:background 0.12s;}
+.loadmore-btn:hover{background:#1e1e1e;}
 @media (min-width: 1280px) and (pointer: coarse), (min-width: 1280px) and (hover: none) {
   .sidebar { width: 220px; }
   .nav-item { padding: 14px 20px; font-size: 16px; gap: 14px; }
@@ -257,7 +250,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   position: relative;
 }
 .watch-btn:focus { outline: 3px solid #fff !important; background: #3d8fe0; }
-/* CAMBIO 1: foco para searchbar */
 .searchbar:focus { outline: 3px solid var(--accent) !important; outline-offset: 3px; }
 .futbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .match-big { background: var(--card); border: 0.5px solid var(--border2); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
@@ -276,13 +268,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .team-escudo { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
 .team-name-big { font-size: 13px; font-weight: 500; color: var(--text2); text-align: center; }
 .match-vs { font-size: 22px; font-weight: 700; color: var(--text4); }
-.match-score-big { font-size: 28px; font-weight: 700; color: #fff; text-align: center; }
-.match-min { font-size: 12px; color: var(--live); font-weight: 600; text-align: center; }
-.match-provs { display: flex; gap: 6px; flex-wrap: wrap; }
-.plat-logo-wrap { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
-.plat-logo-img { width: 80%; height: 80%; object-fit: contain; }
-.plat-logo-fallback { font-size: 11px; font-weight: 700; color: #fff; position: absolute; }
-.plat-logo-img + .plat-logo-fallback { display: none; }
+.match-canales-hint { font-size: 11px; color: #555; text-align: center; margin-top: 4px; }
+.match-big:focus { outline: 3px solid var(--accent) !important; outline-offset: 3px; }
 .viewer-modal { position: fixed; inset: 0; background: #000; z-index: 3000; display: none; flex-direction: column; }
 .viewer-modal.open { display: flex; }
 .viewer-bar { height: 48px; background: #111; border-bottom: 0.5px solid #222; display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; }
@@ -302,8 +289,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .canal-modal-btn { display: flex; align-items: center; padding: 13px 16px; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; transition: all 0.15s; margin-bottom: 8px; }
 .canal-modal-btn:hover, .canal-modal-btn:focus { border-color: var(--accent); background: var(--accent-dim); outline: none; }
 .canal-modal-btn:last-child { margin-bottom: 0; }
-.match-canales-hint { font-size: 11px; color: #555; text-align: center; margin-top: 4px; }
-.match-big:focus { outline: 3px solid var(--accent) !important; outline-offset: 3px; }
 .webpages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 14px; }
 .webpage-card { background: var(--card); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 20px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; transition: all 0.15s; }
 .webpage-card:hover { border-color: var(--accent); transform: translateY(-2px); }
@@ -318,9 +303,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 <div class="sub-screen" id="sub-screen">
   <div class="sub-box">
     <div class="sub-logo">Cine<em>tra</em></div>
-    <div class="sub-tagline">Ingresá tu código de acceso</div>
+    <div class="sub-tagline">Ingresa tu codigo de acceso</div>
     <div class="sub-input-wrap">
-      <div class="sub-label">Código de acceso</div>
+      <div class="sub-label">Codigo de acceso</div>
       <input class="sub-input" id="sub-input" placeholder="000000" maxlength="8" inputmode="numeric" autofocus
         oninput="this.value=this.value.replace(/[^0-9]/g,'')"
         onkeydown="if(event.key==='Enter')checkCode()">
@@ -334,11 +319,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 <div class="user-bar" id="user-bar">
   <div class="ub-logo">Cine<em>tra</em></div>
   <div class="ub-code-wrap">
-    <span class="ub-code-label">Código</span>
+    <span class="ub-code-label">Codigo</span>
     <span class="ub-code-num" id="ub-code">——</span>
   </div>
   <div class="ub-days-wrap">
-    <span class="ub-days-label">Días restantes:</span>
+    <span class="ub-days-label">Dias restantes:</span>
     <span class="ub-days-num" id="ub-days">—</span>
   </div>
 </div>
@@ -347,13 +332,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   <div class="sidebar">
     <div class="nav-item active" id="nav-home" onclick="navigate('home')" tabindex="0" onkeydown="if(event.key==='Enter')navigate('home')"><i class="ti ti-home"></i> Inicio</div>
     <div class="nav-item" id="nav-tv" onclick="navigate('tv')"><i class="ti ti-device-tv"></i> TV en vivo</div>
-    <div class="nav-item" id="nav-futbol" onclick="navigate('futbol')"><i class="ti ti-ball-football"></i> Fútbol en vivo</div>
-    <div class="nav-item" id="nav-peliculas" onclick="navigate('peliculas')"><i class="ti ti-movie"></i> Películas</div>
+    <div class="nav-item" id="nav-futbol" onclick="navigate('futbol')"><i class="ti ti-ball-football"></i> Futbol en vivo</div>
+    <div class="nav-item" id="nav-peliculas" onclick="navigate('peliculas')"><i class="ti ti-movie"></i> Peliculas</div>
     <div class="nav-item" id="nav-series" onclick="navigate('series')"><i class="ti ti-device-tv-old"></i> Series</div>
     <div class="nav-item" id="nav-anime" onclick="navigate('anime')"><i class="ti ti-eye"></i> Animes</div>
     <div class="nav-item" id="nav-plataformas" onclick="navigate('plataformas')"><i class="ti ti-apps"></i> Plataformas</div>
-    <div class="nav-item" id="nav-categorias" onclick="navigate('categorias')"><i class="ti ti-tag"></i> Géneros</div>
-    <div class="nav-item" id="nav-paginas" onclick="navigate('paginas')"><i class="ti ti-world"></i> Páginas web</div>
+    <div class="nav-item" id="nav-categorias" onclick="navigate('categorias')"><i class="ti ti-tag"></i> Generos</div>
+    <div class="nav-item" id="nav-paginas" onclick="navigate('paginas')"><i class="ti ti-world"></i> Paginas web</div>
   </div>
 
   <div class="main">
@@ -368,21 +353,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       </div>
       <div class="section">
         <div class="sec-header">
-          <div class="sec-title"><i class="ti ti-movie"></i> Películas recientes</div>
+          <div class="sec-title"><i class="ti ti-movie"></i> Peliculas recientes</div>
           <div class="ver-mas" onclick="navigate('peliculas')">Ver todas <i class="ti ti-chevron-right"></i></div>
         </div>
         <div class="row" id="home-peliculas"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
       </div>
       <div class="section">
         <div class="sec-header">
-          <div class="sec-title"><i class="ti ti-device-tv-old"></i> Últimos capítulos</div>
+          <div class="sec-title"><i class="ti ti-device-tv-old"></i> Ultimos capitulos</div>
           <div class="ver-mas" onclick="navigate('series')">Ver todos <i class="ti ti-chevron-right"></i></div>
         </div>
         <div class="row" id="home-series"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
       </div>
       <div class="section">
         <div class="sec-header">
-          <div class="sec-title"><i class="ti ti-eye"></i> Últimos animes</div>
+          <div class="sec-title"><i class="ti ti-eye"></i> Ultimos animes</div>
           <div class="ver-mas" onclick="navigate('anime')">Ver todos <i class="ti ti-chevron-right"></i></div>
         </div>
         <div class="row" id="home-anime"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
@@ -392,60 +377,59 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="panel" id="panel-tv">
       <div class="panel-title"><i class="ti ti-device-tv"></i> TV en vivo</div>
       <div class="tabs" id="tv-tabs">
-        <div class="tab active" onclick="filterTV('todos',this)">📺 Todos</div>
-        <div class="tab" onclick="filterTV('deportes',this)">⚽ Deportes</div>
-        <div class="tab" onclick="filterTV('noticias',this)">📰 Noticias</div>
-        <div class="tab" onclick="filterTV('infantil',this)">🎠 Infantil</div>
-        <div class="tab" onclick="filterTV('entretenimiento',this)">🎭 Entretenimiento</div>
-        <div class="tab" onclick="filterTV('peliculas',this)">🎬 Películas</div>
-        <div class="tab" onclick="filterTV('mas',this)">➕ Más</div>
+        <div class="tab active" onclick="filterTV('todos',this)">Todos</div>
+        <div class="tab" onclick="filterTV('deportes',this)">Deportes</div>
+        <div class="tab" onclick="filterTV('noticias',this)">Noticias</div>
+        <div class="tab" onclick="filterTV('infantil',this)">Infantil</div>
+        <div class="tab" onclick="filterTV('entretenimiento',this)">Entretenimiento</div>
+        <div class="tab" onclick="filterTV('peliculas',this)">Peliculas</div>
+        <div class="tab" onclick="filterTV('mas',this)">Mas</div>
       </div>
       <div class="tv-grid" id="tv-grid"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
     </div>
 
     <div class="panel" id="panel-futbol">
-      <div class="panel-title"><i class="ti ti-ball-football"></i> Fútbol en vivo</div>
+      <div class="panel-title"><i class="ti ti-ball-football"></i> Futbol en vivo</div>
       <div class="tabs" id="futbol-tabs">
-        <div class="tab active" onclick="filterFutbolTab('todos',this)">🟢 Todos</div>
-        <div class="tab" onclick="filterFutbolTab('live',this)">🔴 En vivo</div>
-        <div class="tab" onclick="filterFutbolTab('soon',this)">🟡 En breve</div>
-        <div class="tab" onclick="filterFutbolTab('next',this)">📅 Próximos</div>
+        <div class="tab active" onclick="filterFutbolTab('todos',this)">Todos</div>
+        <div class="tab" onclick="filterFutbolTab('live',this)">En vivo</div>
+        <div class="tab" onclick="filterFutbolTab('soon',this)">En breve</div>
+        <div class="tab" onclick="filterFutbolTab('next',this)">Proximos</div>
       </div>
       <div id="futbol-content"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
     </div>
 
-    <!-- PELÍCULAS — CAMBIO 2: tabindex y onclick en searchbar -->
     <div class="panel" id="panel-peliculas">
-      <div class="panel-title"><i class="ti ti-movie"></i> Películas</div>
-      <div class="searchbar" tabindex="0" onclick="this.querySelector('input').focus()"><i class="ti ti-search"></i><input type="text" placeholder="Buscar película..." oninput="filterContent('peliculas',this.value)"></div>
+      <div class="panel-title"><i class="ti ti-movie"></i> Peliculas</div>
+      <div class="searchbar" tabindex="0" onclick="this.querySelector('input').focus()"><i class="ti ti-search"></i><input type="text" placeholder="Buscar pelicula..." oninput="filterContent('peliculas',this.value)"></div>
       <div class="tabs">
         <div class="tab active" onclick="filterGenre('peliculas','todos',this)">Todas</div>
-        <div class="tab" onclick="filterGenre('peliculas','Acción',this)">Acción</div>
+        <div class="tab" onclick="filterGenre('peliculas','Accion',this)">Accion</div>
         <div class="tab" onclick="filterGenre('peliculas','Drama',this)">Drama</div>
         <div class="tab" onclick="filterGenre('peliculas','Comedia',this)">Comedia</div>
         <div class="tab" onclick="filterGenre('peliculas','Terror',this)">Terror</div>
         <div class="tab" onclick="filterGenre('peliculas','Sci-Fi',this)">Sci-Fi</div>
-        <div class="tab" onclick="filterGenre('peliculas','Animación',this)">Animación</div>
+        <div class="tab" onclick="filterGenre('peliculas','Animacion',this)">Animacion</div>
       </div>
       <div class="content-grid" id="peliculas-grid"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
+      <button class="loadmore-btn" id="loadmore-peliculas" onclick="loadMoreContent('peliculas')" style="display:none;">Ver mas</button>
     </div>
 
-    <!-- SERIES — CAMBIO 2 -->
     <div class="panel" id="panel-series">
       <div class="panel-title"><i class="ti ti-device-tv-old"></i> Series</div>
       <div class="searchbar" tabindex="0" onclick="this.querySelector('input').focus()"><i class="ti ti-search"></i><input type="text" placeholder="Buscar serie..." oninput="filterContent('series',this.value)"></div>
       <div class="tabs">
         <div class="tab active" onclick="filterGenre('series','todos',this)">Todas</div>
         <div class="tab" onclick="filterGenre('series','Drama',this)">Drama</div>
-        <div class="tab" onclick="filterGenre('series','Acción',this)">Acción</div>
+        <div class="tab" onclick="filterGenre('series','Accion',this)">Accion</div>
         <div class="tab" onclick="filterGenre('series','Comedia',this)">Comedia</div>
         <div class="tab" onclick="filterGenre('series','Sci-Fi',this)">Sci-Fi</div>
         <div class="tab" onclick="filterGenre('series','Suspenso',this)">Suspenso</div>
       </div>
       <div class="content-grid" id="series-grid"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
+      <button class="loadmore-btn" id="loadmore-series" onclick="loadMoreContent('series')" style="display:none;">Ver mas</button>
     </div>
 
-    <!-- ANIME — CAMBIO 2 -->
     <div class="panel" id="panel-anime">
       <div class="panel-title"><i class="ti ti-eye"></i> Animes</div>
       <div class="searchbar" tabindex="0" onclick="this.querySelector('input').focus()"><i class="ti ti-search"></i><input type="text" placeholder="Buscar anime..." oninput="filterContent('anime',this.value)"></div>
@@ -457,6 +441,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
         <div class="tab" onclick="filterGenre('anime','Romance',this)">Romance</div>
       </div>
       <div class="content-grid" id="anime-grid"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
+      <button class="loadmore-btn" id="loadmore-anime" onclick="loadMoreContent('anime')" style="display:none;">Ver mas</button>
     </div>
 
     <div class="panel" id="panel-plataformas">
@@ -466,52 +451,52 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       </div>
       <div id="plat-content"></div>
       <div class="plat-grid">
-        <div class="plat-card" onclick="filterByPlat('Netflix')"><div class="plat-logo-wrap" style="background:#e50914;"><img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Netflix</span></div><div class="plat-name">Netflix</div><div class="plat-count" id="count-netflix">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Disney+')"><div class="plat-logo-wrap" style="background:#00a8e0;"><img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Disney+</span></div><div class="plat-name">Disney+</div><div class="plat-count" id="count-disney">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Max')"><div class="plat-logo-wrap" style="background:#002be7;"><img src="https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Max</span></div><div class="plat-name">Max</div><div class="plat-count" id="count-max">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Prime Video')"><div class="plat-logo-wrap" style="background:#00a8e0;"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Prime</span></div><div class="plat-name">Prime Video</div><div class="plat-count" id="count-prime">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Paramount+')"><div class="plat-logo-wrap" style="background:#0064ff;"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Paramount_Plus_logo.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Paramount+</span></div><div class="plat-name">Paramount+</div><div class="plat-count" id="count-paramount">— títulos</div></div>
-        <div class="plat-card" onclick="filterByPlat('Apple TV+')"><div class="plat-logo-wrap" style="background:#000;"><img src="https://upload.wikimedia.org/wikipedia/commons/2/28/Apple_TV_Plus_Logo.svg" onerror="this.style.display='none'" class="plat-logo-img"><span class="plat-logo-fallback">Apple TV+</span></div><div class="plat-name">Apple TV+</div><div class="plat-count" id="count-apple">— títulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Netflix')"><div class="plat-icon" style="background:#e50914;">N</div><div class="plat-name">Netflix</div><div class="plat-count" id="count-netflix">— titulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Disney+')"><div class="plat-icon" style="background:#00a8e0;">D+</div><div class="plat-name">Disney+</div><div class="plat-count" id="count-disney">— titulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Max')"><div class="plat-icon" style="background:#002be7;">M</div><div class="plat-name">Max</div><div class="plat-count" id="count-max">— titulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Prime Video')"><div class="plat-icon" style="background:#00a8e0;">P</div><div class="plat-name">Prime Video</div><div class="plat-count" id="count-prime">— titulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Paramount+')"><div class="plat-icon" style="background:#0064ff;">P+</div><div class="plat-name">Paramount+</div><div class="plat-count" id="count-paramount">— titulos</div></div>
+        <div class="plat-card" onclick="filterByPlat('Apple TV+')"><div class="plat-icon" style="background:#000;">TV+</div><div class="plat-name">Apple TV+</div><div class="plat-count" id="count-apple">— titulos</div></div>
       </div>
     </div>
 
     <div class="panel" id="panel-categorias">
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="back-btn" id="cat-back" style="display:none;" onclick="resetCat()"><i class="ti ti-arrow-left"></i> Volver</div>
-        <div class="panel-title"><i class="ti ti-tag"></i> <span id="cat-title">Géneros</span></div>
+        <div class="panel-title"><i class="ti ti-tag"></i> <span id="cat-title">Generos</span></div>
       </div>
       <div id="cat-content"></div>
       <div class="cat-grid" id="cat-grid">
         <div class="cat-card" style="background:#1a1a2e;border-color:#3949AB;" onclick="filterByCat('Drama')"><i class="ti ti-masks-theater cat-icon" style="color:#7986CB;font-size:22px;"></i><div class="cat-name" style="color:#9FA8DA;">Drama</div></div>
         <div class="cat-card" style="background:#1a2a1a;border-color:#388E3C;" onclick="filterByCat('Comedia')"><i class="ti ti-mood-smile cat-icon" style="color:#66BB6A;font-size:22px;"></i><div class="cat-name" style="color:#A5D6A7;">Comedia</div></div>
         <div class="cat-card" style="background:#2a1a1a;border-color:#E53935;" onclick="filterByCat('Suspenso')"><i class="ti ti-question-mark cat-icon" style="color:#EF5350;font-size:22px;"></i><div class="cat-name" style="color:#EF9A9A;">Suspenso</div></div>
-        <div class="cat-card" style="background:#2a1500;border-color:#F57C00;" onclick="filterByCat('Acción')"><i class="ti ti-sword cat-icon" style="color:#FFA726;font-size:22px;"></i><div class="cat-name" style="color:#FFCC80;">Acción</div></div>
+        <div class="cat-card" style="background:#2a1500;border-color:#F57C00;" onclick="filterByCat('Accion')"><i class="ti ti-sword cat-icon" style="color:#FFA726;font-size:22px;"></i><div class="cat-name" style="color:#FFCC80;">Accion</div></div>
         <div class="cat-card" style="background:#1a0a1a;border-color:#7B1FA2;" onclick="filterByCat('Terror')"><i class="ti ti-ghost cat-icon" style="color:#AB47BC;font-size:22px;"></i><div class="cat-name" style="color:#CE93D8;">Terror</div></div>
         <div class="cat-card" style="background:#2a1a20;border-color:#E91E63;" onclick="filterByCat('Romance')"><i class="ti ti-heart cat-icon" style="color:#F06292;font-size:22px;"></i><div class="cat-name" style="color:#F48FB1;">Romance</div></div>
         <div class="cat-card" style="background:#1a1510;border-color:#795548;" onclick="filterByCat('Crimen')"><i class="ti ti-shield cat-icon" style="color:#A1887F;font-size:22px;"></i><div class="cat-name" style="color:#BCAAA4;">Crimen</div></div>
         <div class="cat-card" style="background:#0a1a1a;border-color:#00796B;" onclick="filterByCat('Documental')"><i class="ti ti-camera cat-icon" style="color:#26A69A;font-size:22px;"></i><div class="cat-name" style="color:#80CBC4;">Documental</div></div>
         <div class="cat-card" style="background:#1a1a0a;border-color:#F9A825;" onclick="filterByCat('Familia')"><i class="ti ti-star cat-icon" style="color:#FFD54F;font-size:22px;"></i><div class="cat-name" style="color:#FFE082;">Familia</div></div>
         <div class="cat-card" style="background:#0a1a10;border-color:#2E7D32;" onclick="filterByCat('Aventura')"><i class="ti ti-map cat-icon" style="color:#66BB6A;font-size:22px;"></i><div class="cat-name" style="color:#A5D6A7;">Aventura</div></div>
-        <div class="cat-card" style="background:#150a2a;border-color:#512DA8;" onclick="filterByCat('Fantasía')"><i class="ti ti-wand cat-icon" style="color:#9575CD;font-size:22px;"></i><div class="cat-name" style="color:#B39DDB;">Fantasía</div></div>
+        <div class="cat-card" style="background:#150a2a;border-color:#512DA8;" onclick="filterByCat('Fantasia')"><i class="ti ti-wand cat-icon" style="color:#9575CD;font-size:22px;"></i><div class="cat-name" style="color:#B39DDB;">Fantasia</div></div>
         <div class="cat-card" style="background:#0a1520;border-color:#1565C0;" onclick="filterByCat('Misterio')"><i class="ti ti-zoom-question cat-icon" style="color:#42A5F5;font-size:22px;"></i><div class="cat-name" style="color:#90CAF9;">Misterio</div></div>
-        <div class="cat-card" style="background:#0a1a2a;border-color:#0277BD;" onclick="filterByCat('Ciencia Ficción')"><i class="ti ti-planet cat-icon" style="color:#29B6F6;font-size:22px;"></i><div class="cat-name" style="color:#81D4FA;">Ciencia Ficción</div></div>
-        <div class="cat-card" style="background:#1a150a;border-color:#E65100;" onclick="filterByCat('Animación')"><i class="ti ti-brush cat-icon" style="color:#FFA726;font-size:22px;"></i><div class="cat-name" style="color:#FFCC80;">Animación</div></div>
-        <div class="cat-card" style="background:#1a1000;border-color:#BF360C;" onclick="filterByCat('Bélica')"><i class="ti ti-helmet cat-icon" style="color:#FF7043;font-size:22px;"></i><div class="cat-name" style="color:#FFAB91;">Bélica</div></div>
-        <div class="cat-card" style="background:#1a0a10;border-color:#AD1457;" onclick="filterByCat('Música')"><i class="ti ti-music cat-icon" style="color:#EC407A;font-size:22px;"></i><div class="cat-name" style="color:#F48FB1;">Música</div></div>
+        <div class="cat-card" style="background:#0a1a2a;border-color:#0277BD;" onclick="filterByCat('Ciencia Ficcion')"><i class="ti ti-planet cat-icon" style="color:#29B6F6;font-size:22px;"></i><div class="cat-name" style="color:#81D4FA;">Ciencia Ficcion</div></div>
+        <div class="cat-card" style="background:#1a150a;border-color:#E65100;" onclick="filterByCat('Animacion')"><i class="ti ti-brush cat-icon" style="color:#FFA726;font-size:22px;"></i><div class="cat-name" style="color:#FFCC80;">Animacion</div></div>
+        <div class="cat-card" style="background:#1a1000;border-color:#BF360C;" onclick="filterByCat('Belica')"><i class="ti ti-helmet cat-icon" style="color:#FF7043;font-size:22px;"></i><div class="cat-name" style="color:#FFAB91;">Belica</div></div>
+        <div class="cat-card" style="background:#1a0a10;border-color:#AD1457;" onclick="filterByCat('Musica')"><i class="ti ti-music cat-icon" style="color:#EC407A;font-size:22px;"></i><div class="cat-name" style="color:#F48FB1;">Musica</div></div>
         <div class="cat-card" style="background:#10100a;border-color:#558B2F;" onclick="filterByCat('Historia')"><i class="ti ti-book cat-icon" style="color:#9CCC65;font-size:22px;"></i><div class="cat-name" style="color:#C5E1A5;">Historia</div></div>
         <div class="cat-card" style="background:#1a1000;border-color:#6D4C41;" onclick="filterByCat('Western')"><i class="ti ti-horse cat-icon" style="color:#A1887F;font-size:22px;"></i><div class="cat-name" style="color:#BCAAA4;">Western</div></div>
       </div>
     </div>
 
     <div class="panel" id="panel-paginas">
-      <div class="panel-title"><i class="ti ti-world"></i> Páginas web</div>
-      <p style="font-size:12.5px;color:var(--text4);margin-bottom:4px;">Accedé directamente a estas páginas desde Cinetra.</p>
+      <div class="panel-title"><i class="ti ti-world"></i> Paginas web</div>
+      <p style="font-size:12.5px;color:var(--text4);margin-bottom:4px;">Accede directamente a estas paginas desde Cinetra.</p>
       <div class="webpages-grid">
-        <div class="webpage-card" onclick="openViewer('https://pelisjuanita.com','PelisJuanita')"><div class="webpage-icon">🎬</div><div class="webpage-name">PelisJuanita</div><div class="webpage-desc">Películas y series</div></div>
-        <div class="webpage-card" onclick="openViewer('https://www.poseidonhd2.co','PoseidonHD')"><div class="webpage-icon">🔱</div><div class="webpage-name">PoseidonHD</div><div class="webpage-desc">Películas y series HD</div></div>
+        <div class="webpage-card" onclick="openViewer('https://pelisjuanita.com','PelisJuanita')"><div class="webpage-icon">🎬</div><div class="webpage-name">PelisJuanita</div><div class="webpage-desc">Peliculas y series</div></div>
+        <div class="webpage-card" onclick="openViewer('https://www.poseidonhd2.co','PoseidonHD')"><div class="webpage-icon">🔱</div><div class="webpage-name">PoseidonHD</div><div class="webpage-desc">Peliculas y series HD</div></div>
         <div class="webpage-card" onclick="openViewer('https://www4.animeflv.net','AnimeFLV')"><div class="webpage-icon">⛩️</div><div class="webpage-name">AnimeFLV</div><div class="webpage-desc">Anime online</div></div>
-        <div class="webpage-card" onclick="openViewer('https://pelotalibretv.su','PelotaLibre')"><div class="webpage-icon">⚽</div><div class="webpage-name">PelotaLibre</div><div class="webpage-desc">Fútbol en vivo</div></div>
-        <div class="webpage-card" onclick="openViewer('https://pelisplushd.bz','PelisPlus')"><div class="webpage-icon">🎭</div><div class="webpage-name">PelisPlus</div><div class="webpage-desc">Películas y series</div></div>
+        <div class="webpage-card" onclick="openViewer('https://pelotalibretv.su','PelotaLibre')"><div class="webpage-icon">⚽</div><div class="webpage-name">PelotaLibre</div><div class="webpage-desc">Futbol en vivo</div></div>
+        <div class="webpage-card" onclick="openViewer('https://pelisplushd.bz','PelisPlus')"><div class="webpage-icon">🎭</div><div class="webpage-name">PelisPlus</div><div class="webpage-desc">Peliculas y series</div></div>
         <div class="webpage-card" onclick="openViewer('https://www.pelisplus.app','PelisPlus App')"><div class="webpage-icon">📺</div><div class="webpage-name">Ver TV</div><div class="webpage-desc">TV en vivo gratis</div></div>
       </div>
     </div>
@@ -528,7 +513,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
         <div class="player-video-col">
           <div class="video-thumb" id="pm-thumb"><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div></div>
           <button class="watch-btn" id="pm-btn"><i class="ti ti-external-link"></i> Ver ahora</button>
-          <div class="open-note"><i class="ti ti-info-circle"></i> Se abre en nueva pestaña</div>
+          <div class="open-note"><i class="ti ti-info-circle"></i> Se abre en nueva pestana</div>
         </div>
       </div>
     </div>
@@ -558,7 +543,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
           <div class="video-thumb" id="ps-thumb"><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div></div>
           <div class="ep-info"><div class="ep-info-label">Reproduciendo</div><div class="ep-info-title" id="ps-ep-title">—</div></div>
           <button class="watch-btn" id="ps-btn"><i class="ti ti-external-link"></i> Ver episodio</button>
-          <div class="open-note"><i class="ti ti-info-circle"></i> Se abre en nueva pestaña</div>
+          <div class="open-note"><i class="ti ti-info-circle"></i> Se abre en nueva pestana</div>
         </div>
       </div>
     </div>
@@ -577,21 +562,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
           <div class="canal-video-bg"></div>
           <div class="canal-video-logo" id="pc-video-logo"></div>
           <div class="canal-play-btn"><i class="ti ti-player-play-filled"></i></div>
-          <div class="canal-play-label">Tocá para ver en vivo</div>
+          <div class="canal-play-label">Toca para ver en vivo</div>
         </div>
         <button class="canal-open-btn" id="pc-open-btn"><i class="ti ti-external-link"></i> Ver canal en vivo</button>
-        <div class="canal-now"><div class="canal-now-label">📡 Canal seleccionado</div><div class="canal-now-prog" id="pc-prog">—</div></div>
+        <div class="canal-now"><div class="canal-now-label">Canal seleccionado</div><div class="canal-now-prog" id="pc-prog">—</div></div>
       </div>
     </div>
 
   </div>
 </div>
-
 <script>
 var SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
 var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var state = { peliculas:[], series:[], anime:[], canales:[], partidos:[], currentSection:'home' };
+var PAGE_SIZE = 100;
+var _pg = {
+  peliculas: { offset: 0, loading: false, done: false },
+  series:    { offset: 0, loading: false, done: false },
+  anime:     { offset: 0, loading: false, done: false }
+};
 var _canalLink = '';
 var grads = ['linear-gradient(135deg,#1a237e,#1565C0)','linear-gradient(135deg,#1b5e20,#388E3C)','linear-gradient(135deg,#4a148c,#7B1FA2)','linear-gradient(135deg,#b71c1c,#E53935)','linear-gradient(135deg,#004d40,#00796B)','linear-gradient(135deg,#1a237e,#3949AB)','linear-gradient(135deg,#3e2723,#795548)','linear-gradient(135deg,#880E4F,#E91E63)'];
 function rg() { return grads[Math.floor(Math.random()*grads.length)]; }
@@ -605,19 +595,19 @@ function showErr(msg) { var el = document.getElementById('sub-error'); el.textCo
 
 async function checkCode() {
   var code = document.getElementById('sub-input').value.trim();
-  if (!code) return showErr('Ingresá tu código');
+  if (!code) return showErr('Ingresa tu codigo');
   document.getElementById('sub-btn').disabled = true;
   document.getElementById('sub-loading').style.display = 'block';
   document.getElementById('sub-error').style.display = 'none';
   var res = await db.from('codigos').select('*').eq('codigo', code).single();
   document.getElementById('sub-btn').disabled = false;
   document.getElementById('sub-loading').style.display = 'none';
-  if (res.error || !res.data) return showErr('Código inválido. Verificá e intentá de nuevo.');
+  if (res.error || !res.data) return showErr('Codigo invalido. Verifica e intenta de nuevo.');
   var data = res.data;
   var deviceId = getDeviceId();
   var dias = Math.ceil((new Date(data.fecha_vencimiento) - new Date()) / (1000*60*60*24));
-  if (dias <= 0) return showErr('Tu suscripción venció. Contactá al administrador para renovar.');
-  if (data.device_id && data.device_id !== deviceId) return showErr('Este código ya está en uso en otro dispositivo.');
+  if (dias <= 0) return showErr('Tu suscripcion vencio. Contacta al administrador para renovar.');
+  if (data.device_id && data.device_id !== deviceId) return showErr('Este codigo ya esta en uso en otro dispositivo.');
   var updateObj = { ultimo_acceso: new Date().toISOString() };
   if (!data.device_id) updateObj.device_id = deviceId;
   await db.from('codigos').update(updateObj).eq('codigo', code);
@@ -630,7 +620,7 @@ function showApp(code, dias) {
   document.getElementById('user-bar').classList.add('visible');
   document.getElementById('ub-code').textContent = code;
   var d = document.getElementById('ub-days');
-  d.textContent = dias + (dias===1?' día':' días');
+  d.textContent = dias + (dias===1?' dia':' dias');
   d.className = 'ub-days-num ' + (dias > 7 ? 'ok' : dias > 3 ? 'warn' : 'danger');
   loadAll();
 }
@@ -677,10 +667,8 @@ function openViewer(url, name) {
   modal.classList.add('open');
 }
 function closeViewer() {
-  var modal = document.getElementById('viewer-modal');
-  var iframe = document.getElementById('viewer-iframe');
-  modal.classList.remove('open');
-  iframe.src = '';
+  document.getElementById('viewer-modal').classList.remove('open');
+  document.getElementById('viewer-iframe').src = '';
 }
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { closeViewer(); document.getElementById('partido-modal-bg').classList.remove('open'); }
@@ -693,11 +681,43 @@ function loadCache() { try { var raw = sessionStorage.getItem(CACHE_KEY); if (!r
 
 function applyData(d) {
   state.peliculas = d.peliculas || []; state.series = d.series || []; state.anime = d.anime || []; state.canales = d.canales || [];
-  renderHome(); renderTV(); renderGrid('peliculas', state.peliculas); renderGrid('series', state.series); renderGrid('anime', state.anime); updatePlatCounts();
+  ['peliculas','series','anime'].forEach(function(t) {
+    _pg[t].offset  = state[t].length;
+    _pg[t].done    = state[t].length < PAGE_SIZE;
+    _pg[t].loading = false;
+  });
+  renderHome(); renderTV();
+  renderGrid('peliculas', state.peliculas); updateLoadMore('peliculas');
+  renderGrid('series',    state.series);    updateLoadMore('series');
+  renderGrid('anime',     state.anime);     updateLoadMore('anime');
+  updatePlatCounts();
+}
+
+async function loadMoreContent(type) {
+  var pg = _pg[type];
+  if (pg.loading || pg.done) return;
+  pg.loading = true; updateLoadMore(type);
+  var res = await db.from(type).select('*').order('created_at',{ascending:false}).range(pg.offset, pg.offset+PAGE_SIZE-1);
+  var items = res.data || [];
+  if (items.length < PAGE_SIZE) pg.done = true;
+  if (items.length > 0) { state[type] = state[type].concat(items); pg.offset += items.length; renderGrid(type, state[type]); }
+  pg.loading = false; updateLoadMore(type);
+}
+function updateLoadMore(type) {
+  var btn = document.getElementById('loadmore-'+type);
+  if (!btn) return;
+  if (_pg[type].done) { btn.style.display='none'; return; }
+  btn.style.display='block';
+  btn.textContent = _pg[type].loading ? 'Cargando...' : 'Ver mas';
 }
 
 async function fetchFromDB() {
-  var res = await Promise.all([db.from('peliculas').select('*').order('created_at',{ascending:false}),db.from('series').select('*').order('created_at',{ascending:false}),db.from('anime').select('*').order('created_at',{ascending:false}),db.from('canales').select('*').order('nombre')]);
+  var res = await Promise.all([
+    db.from('peliculas').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
+    db.from('series').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
+    db.from('anime').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
+    db.from('canales').select('*').order('nombre')
+  ]);
   var d = { peliculas: res[0].data||[], series: res[1].data||[], anime: res[2].data||[], canales: res[3].data||[] };
   saveCache(d); applyData(d); loadFutbol();
 }
@@ -710,35 +730,35 @@ async function loadAll() {
 function renderHome() {
   var hc = document.getElementById('home-canales');
   hc.innerHTML = state.canales.slice(0,6).map(function(c) {
-    var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" onerror="this.style.display=\'none\'">' : '<div class="ch-dot" style="background:'+(c.color||'#555')+'">'+(c.siglas||c.nombre.substring(0,3).toUpperCase())+'</div>';
-    return '<div class="ch-card" onclick="openCanal(\''+c.id+'\')">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" onerror="this.style.display='none'">' : '<div class="ch-dot" style="background:'+(c.color||'#555')+'">'+(c.siglas||c.nombre.substring(0,3).toUpperCase())+'</div>';
+    return '<div class="ch-card" onclick="openCanal(''+c.id+'')">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales</div>';
-  document.getElementById('home-peliculas').innerHTML = state.peliculas.slice(0,6).map(movieCardHTML).join('') || '<div class="empty">Sin películas</div>';
+  document.getElementById('home-peliculas').innerHTML = state.peliculas.slice(0,6).map(movieCardHTML).join('') || '<div class="empty">Sin peliculas</div>';
   document.getElementById('home-series').innerHTML = state.series.slice(0,5).map(function(s){ return seriesRowHTML(s,'series'); }).join('') || '<div class="empty">Sin series</div>';
   document.getElementById('home-anime').innerHTML = state.anime.slice(0,5).map(function(s){ return seriesRowHTML(s,'anime'); }).join('') || '<div class="empty">Sin animes</div>';
 }
 
 function movieCardHTML(p) {
-  var img = p.poster_url ? '<img src="'+p.poster_url+'" onerror="this.style.display=\'none\'">' : '<div class="poster-bg" style="background:'+rg()+';width:100%;height:100%;"></div>';
-  return '<div class="movie-card" onclick="openPelicula(\''+p.id+'\')"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+(p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
+  var img = p.poster_url ? '<img src="'+p.poster_url+'" onerror="this.style.display='none'">' : '<div class="poster-bg" style="background:'+rg()+';width:100%;height:100%;"></div>';
+  return '<div class="movie-card" onclick="openPelicula(''+p.id+'')"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+(p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
 }
 function seriesRowHTML(s, type) {
-  var img = s.poster_url ? '<img src="'+s.poster_url+'" onerror="this.style.display=\'none\'">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
-  return '<div class="series-card" onclick="openSerie(\''+s.id+'\',\''+type+'\')"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' · Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
+  var img = s.poster_url ? '<img src="'+s.poster_url+'" onerror="this.style.display='none'">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
+  return '<div class="series-card" onclick="openSerie(''+s.id+'',''+type+'')"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
 }
 
 function renderTV(filtro) {
   filtro = filtro || 'todos';
   var list = filtro==='todos' ? state.canales : state.canales.filter(function(c){ return c.categoria===filtro; });
   document.getElementById('tv-grid').innerHTML = list.map(function(c) {
-    var logo = c.logo_url ? '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display=\'none\'">' : (c.siglas||c.nombre.substring(0,3).toUpperCase());
-    return '<div class="tv-card" onclick="openCanal(\''+c.id+'\')"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':(c.color||'#555'))+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
-  }).join('') || '<div class="empty">Sin canales en esta categoría</div>';
+    var logo = c.logo_url ? '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">' : (c.siglas||c.nombre.substring(0,3).toUpperCase());
+    return '<div class="tv-card" onclick="openCanal(''+c.id+'')"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':(c.color||'#555'))+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+  }).join('') || '<div class="empty">Sin canales en esta categoria</div>';
 }
 function filterTV(cat, el) { document.querySelectorAll('#tv-tabs .tab').forEach(function(t){ t.classList.remove('active'); }); el.classList.add('active'); renderTV(cat); }
 
 function contentCardHTML(item, type) {
-  var img = item.poster_url ? '<img src="'+item.poster_url+'" onerror="this.style.display=\'none\'">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
+  var img = item.poster_url ? '<img src="'+item.poster_url+'" onerror="this.style.display='none'">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
   var fn = type==='pelicula' ? "openPelicula('"+item.id+"')" : "openSerie('"+item.id+"','"+type+"')";
   return '<div class="content-card" onclick="'+fn+'"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'')+'</div></div>';
 }
@@ -747,104 +767,153 @@ function renderGrid(type, data) {
   if (!el) return;
   el.innerHTML = data.map(function(item){ return contentCardHTML(item, type==='peliculas'?'pelicula':type==='series'?'serie':'anime'); }).join('') || '<div class="empty">Sin contenido disponible</div>';
 }
-function filterContent(type, val) {
-  var data = state[type].filter(function(i){ return i.titulo.toLowerCase().includes(val.toLowerCase()); });
-  renderGrid(type, data);
+
+async function filterContent(type, val) {
+  var btn = document.getElementById('loadmore-'+type);
+  if (!val || val.length < 2) { renderGrid(type, state[type]); if(btn) updateLoadMore(type); return; }
+  if (btn) btn.style.display = 'none';
+  var res = await db.from(type).select('*').ilike('titulo','%'+val+'%').limit(100);
+  renderGrid(type, res.data || []);
 }
-function filterGenre(type, genre, el) {
+
+async function filterGenre(type, genre, el) {
   el.closest('.tabs').querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
   el.classList.add('active');
-  var data = genre==='todos' ? state[type] : state[type].filter(function(i){ return i.genero && i.genero.includes(genre); });
-  renderGrid(type, data);
+  var btn = document.getElementById('loadmore-'+type);
+  if (genre === 'todos') { renderGrid(type, state[type]); if(btn) updateLoadMore(type); return; }
+  if (btn) btn.style.display = 'none';
+  var res = await db.from(type).select('*').ilike('genero','%'+genre+'%').limit(200);
+  renderGrid(type, res.data || []);
 }
 
 async function loadFutbol() { var res = await db.from('partidos').select('*').order('fecha'); state.partidos = res.data || []; renderFutbol('todos'); }
 function matchBigHTML(p) {
-  var isLive = p.en_vivo, hora = fhora(p.fecha), ahora = new Date(), diff = new Date(p.fecha) - ahora, isSoon = !isLive && diff > 0 && diff < 30*60*1000;
-  var statusBadge = isLive ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>' : isSoon ? '<div class="match-status-badge soon">⚡ EN BREVE</div>' : '<div class="match-status-badge next">📅 PRÓXIMO</div>';
+  var ahora = new Date(), diff = new Date(p.fecha) - ahora;
+  var isLive = p.en_vivo || (diff <= 0 && diff > -120*60000);
+  var isSoon = !isLive && diff > 0 && diff < 30*60*1000;
+  var hora = new Date(p.fecha).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs';
+  var statusBadge = isLive ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>' : isSoon ? '<div class="match-status-badge soon">EN BREVE</div>' : '<div class="match-status-badge next">PROXIMO</div>';
   var canalesCount = (p.canales||[]).length;
-  var canalesHint = canalesCount ? '<div class="match-canales-hint">📺 '+canalesCount+' canal'+(canalesCount>1?' disponibles':' disponible')+'</div>' : '<div class="match-canales-hint" style="color:#333;">Sin canales cargados</div>';
-  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" tabindex="0" onclick="openPartidoModal(\''+p.id+'\')"><div class="match-status-bar">'+statusBadge+'<div class="match-hora">'+(isLive?'● LIVE':hora)+'</div></div>'+(p.liga?'<div class="match-liga">'+p.liga+'</div>':'')+'<div class="match-teams-big"><div class="match-team"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_local+'</div></div><div style="display:flex;flex-direction:column;align-items:center;"><div class="match-vs">VS</div></div><div class="match-team"><div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+'">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_visit+'</div></div></div>'+canalesHint+'</div>';
+  var canalesHint = canalesCount ? '<div class="match-canales-hint">'+canalesCount+' canal'+(canalesCount>1?' disponibles':' disponible')+'</div>' : '<div class="match-canales-hint" style="color:#333;">Sin canales</div>';
+  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" tabindex="0" onclick="openPartidoModal(''+p.id+'')">'+
+    '<div class="match-status-bar">'+statusBadge+'<div class="match-hora">'+(isLive?'LIVE':hora)+'</div></div>'+
+    '<div class="match-teams-big">'+
+    '<div class="match-team"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_local+'</div></div>'+
+    '<div class="match-vs">VS</div>'+
+    '<div class="match-team"><div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+'">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_visit+'</div></div>'+
+    '</div>'+canalesHint+'</div>';
 }
 function openPartidoModal(id) {
   var p = state.partidos.find(function(x){ return x.id===id; });
   if (!p) return;
   var canales = p.canales || [];
-  var modal = document.getElementById('partido-modal-bg');
-  var el = document.getElementById('partido-modal-content');
-  el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px;"><div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+';width:52px;height:52px;font-size:14px;">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div style="font-size:12px;color:#ccc;font-weight:500;text-align:center;">'+p.equipo_local+'</div></div><div style="font-size:22px;font-weight:700;color:#444;">VS</div><div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+';width:52px;height:52px;font-size:14px;">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div><div style="font-size:12px;color:#ccc;font-weight:500;text-align:center;">'+p.equipo_visit+'</div></div></div>'+(p.liga?'<div style="font-size:11px;color:#555;text-align:center;margin-bottom:14px;">'+p.liga+'</div>':'')+'<div style="font-size:12px;color:#555;text-align:center;margin-bottom:12px;">Elegí por qué canal querés ver el partido:</div>'+(canales.length ? canales.map(function(c){ return '<a href="'+c.link+'" target="_blank" class="canal-modal-btn" tabindex="0">📺 '+c.nombre+'</a>'; }).join('') : '<div style="color:#444;font-size:13px;text-align:center;padding:12px;">Sin canales disponibles</div>');
-  modal.classList.add('open');
-  setTimeout(function() { var btns = modal.querySelectorAll('.canal-modal-btn'); if (btns.length) btns[0].focus(); }, 50);
+  document.getElementById('partido-modal-content').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px;">'+
+    '<div style="text-align:center;"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+';width:52px;height:52px;font-size:14px;margin:0 auto 4px;">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div style="font-size:12px;color:#ccc;">'+p.equipo_local+'</div></div>'+
+    '<div style="font-size:22px;font-weight:700;color:#444;">VS</div>'+
+    '<div style="text-align:center;"><div class="team-escudo" style="background:'+(p.color_visit||'#c62828')+';width:52px;height:52px;font-size:14px;margin:0 auto 4px;">'+(p.sigla_visit||p.equipo_visit.substring(0,3).toUpperCase())+'</div><div style="font-size:12px;color:#ccc;">'+p.equipo_visit+'</div></div>'+
+    '</div>'+
+    '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:12px;">Elegí por que canal queres ver el partido:</div>'+
+    (canales.length ? canales.map(function(c){ return '<a href="'+c.link+'" target="_blank" class="canal-modal-btn" tabindex="0">'+c.nombre+'</a>'; }).join('') : '<div style="color:#444;font-size:13px;text-align:center;padding:12px;">Sin canales disponibles</div>');
+  document.getElementById('partido-modal-bg').classList.add('open');
+  setTimeout(function() { var btns = document.getElementById('partido-modal-bg').querySelectorAll('.canal-modal-btn'); if (btns.length) btns[0].focus(); }, 50);
 }
 function renderFutbol(filtro) {
   filtro = filtro || 'todos';
   var ahora = new Date(), list = state.partidos;
-  if (filtro === 'live') list = list.filter(function(p){ return p.en_vivo; });
-  else if (filtro === 'soon') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)<30*60*1000 && (d-ahora)>0; });
-  else if (filtro === 'next') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo && (d-ahora)>=30*60*1000; });
-  if (!list.length) { document.getElementById('futbol-content').innerHTML = '<div class="empty">Sin partidos en esta categoría</div>'; return; }
-  document.getElementById('futbol-content').innerHTML = '<div class="futbol-grid">'+list.map(matchBigHTML).join('')+'</div>';
+  if (filtro === 'live') list = list.filter(function(p){ var d=new Date(p.fecha); return p.en_vivo||(ahora-d>=0&&ahora-d<120*60000); });
+  else if (filtro === 'soon') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo&&(d-ahora)>0&&(d-ahora)<30*60*1000; });
+  else if (filtro === 'next') list = list.filter(function(p){ var d=new Date(p.fecha); return !p.en_vivo&&(d-ahora)>=30*60*1000; });
+  var el = document.getElementById('futbol-content');
+  el.innerHTML = list.length ? '<div class="futbol-grid">'+list.map(matchBigHTML).join('')+'</div>' : '<div class="empty">Sin partidos en esta categoria</div>';
 }
 function filterFutbolTab(filtro, el) { document.querySelectorAll('#futbol-tabs .tab').forEach(function(t){ t.classList.remove('active'); }); el.classList.add('active'); renderFutbol(filtro); }
-function fhora(f) { try { return new Date(f).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs'; } catch(e){ return '—'; } }
 
-function updatePlatCounts() {
-  var all = state.peliculas.concat(state.series).concat(state.anime);
-  var map = {'Netflix':'netflix','Disney+':'disney','Max':'max','Prime Video':'prime','Paramount+':'paramount','Apple TV+':'apple'};
-  Object.keys(map).forEach(function(p) { var el = document.getElementById('count-'+map[p]); if (el) el.textContent = all.filter(function(i){ return i.plataforma===p; }).length + ' títulos'; });
+async function updatePlatCounts() {
+  var plats = [['Netflix','netflix'],['Disney+','disney'],['Max','max'],['Prime Video','prime'],['Paramount+','paramount'],['Apple TV+','apple']];
+  for (var i=0; i<plats.length; i++) {
+    var p=plats[i][0], elId=plats[i][1], el=document.getElementById('count-'+elId);
+    if (!el) continue;
+    var r = await Promise.all([
+      db.from('peliculas').select('id',{count:'exact',head:true}).eq('plataforma',p),
+      db.from('series').select('id',{count:'exact',head:true}).eq('plataforma',p),
+      db.from('anime').select('id',{count:'exact',head:true}).eq('plataforma',p)
+    ]);
+    el.textContent = ((r[0].count||0)+(r[1].count||0)+(r[2].count||0)) + ' titulos';
+  }
 }
-function filterByPlat(plat) {
-  var all = state.peliculas.concat(state.series).concat(state.anime).filter(function(i){ return i.plataforma===plat; });
+
+async function filterByPlat(plat) {
   var container = document.getElementById('plat-content');
   if (!container) return;
   document.getElementById('plat-title').textContent = plat;
   document.getElementById('plat-back').style.display = 'flex';
-  container.innerHTML = all.length ? '<div class="content-grid">' + all.map(function(item){ var isMovie = state.peliculas.find(function(p){ return p.id===item.id; }); var isAnime = state.anime.find(function(a){ return a.id===item.id; }); var type = isMovie ? 'pelicula' : isAnime ? 'anime' : 'serie'; return contentCardHTML(item, type); }).join('') + '</div>' : '<div class="empty">Sin contenido de '+plat+'</div>';
+  container.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
+  var res = await Promise.all([
+    db.from('peliculas').select('*').eq('plataforma',plat).limit(500),
+    db.from('series').select('*').eq('plataforma',plat).limit(500),
+    db.from('anime').select('*').eq('plataforma',plat).limit(500)
+  ]);
+  var all = (res[0].data||[]).map(function(i){return Object.assign({},i,{_t:'pelicula'});})
+    .concat((res[1].data||[]).map(function(i){return Object.assign({},i,{_t:'serie'});}))
+    .concat((res[2].data||[]).map(function(i){return Object.assign({},i,{_t:'anime'});}));
+  container.innerHTML = all.length ? '<div class="content-grid">'+all.map(function(item){ return contentCardHTML(item,item._t); }).join('')+'</div>' : '<div class="empty">Sin contenido de '+plat+'</div>';
 }
 function resetPlat() { document.getElementById('plat-title').textContent = 'Plataformas'; document.getElementById('plat-back').style.display = 'none'; document.getElementById('plat-content').innerHTML = ''; }
-function filterByCat(cat) {
-  var all = state.peliculas.concat(state.series).concat(state.anime).filter(function(i){ return i.genero && i.genero.includes(cat); });
+
+async function filterByCat(cat) {
   var container = document.getElementById('cat-content');
   if (!container) return;
   document.getElementById('cat-title').textContent = cat;
   document.getElementById('cat-back').style.display = 'flex';
   var grid = document.getElementById('cat-grid');
   if (grid) grid.style.display = 'none';
-  container.innerHTML = all.length ? '<div class="content-grid">' + all.map(function(item){ var isMovie = state.peliculas.find(function(p){ return p.id===item.id; }); var isAnime = state.anime.find(function(a){ return a.id===item.id; }); var type = isMovie ? 'pelicula' : isAnime ? 'anime' : 'serie'; return contentCardHTML(item, type); }).join('') + '</div>' : '<div class="empty">Sin contenido de '+cat+'</div>';
+  container.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
+  var res = await Promise.all([
+    db.from('peliculas').select('*').ilike('genero','%'+cat+'%').limit(200),
+    db.from('series').select('*').ilike('genero','%'+cat+'%').limit(200),
+    db.from('anime').select('*').ilike('genero','%'+cat+'%').limit(200)
+  ]);
+  var all = (res[0].data||[]).map(function(i){return Object.assign({},i,{_t:'pelicula'});})
+    .concat((res[1].data||[]).map(function(i){return Object.assign({},i,{_t:'serie'});}))
+    .concat((res[2].data||[]).map(function(i){return Object.assign({},i,{_t:'anime'});}));
+  container.innerHTML = all.length ? '<div class="content-grid">'+all.map(function(item){ return contentCardHTML(item,item._t); }).join('')+'</div>' : '<div class="empty">Sin contenido de '+cat+'</div>';
 }
-function resetCat() { document.getElementById('cat-title').textContent = 'Géneros'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
+function resetCat() { document.getElementById('cat-title').textContent = 'Generos'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
 
-function openPelicula(id) {
+async function openPelicula(id) {
   var p = state.peliculas.find(function(x){ return x.id===id; });
+  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
   if (!p) return;
   navigate('player-movie');
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
-  document.getElementById('pm-tags').innerHTML = '<span class="tag q"></span>'+(p.anio?'<span class="tag">'+p.anio+'</span>':'')+(p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+( p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+(p.plataforma?'<span class="tag">'+p.plataforma+'</span>':'');
+  document.getElementById('pm-tags').innerHTML = (p.anio?'<span class="tag">'+p.anio+'</span>':'')+(p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+(p.plataforma?'<span class="tag">'+p.plataforma+'</span>':'');
   var thumb = document.getElementById('pm-thumb');
   if (p.poster_url) { thumb.innerHTML = '<img src="'+p.poster_url+'" style="width:100%;height:100%;object-fit:cover;"><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
   else { thumb.innerHTML = '<div style="width:100%;height:100%;background:'+rg()+';"></div><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
-  var playMovie = function() { if (window.Android) { Android.playVideo(p.link_reproduccion, p.titulo); } else { window.open(p.link_reproduccion, '_blank'); } };
-  document.getElementById('pm-btn').onclick = playMovie;
-  thumb.onclick = playMovie;
+  var playFn = function() { if (window.Android) Android.playVideo(p.link_reproduccion, p.titulo); else window.open(p.link_reproduccion, '_blank'); };
+  document.getElementById('pm-btn').onclick = playFn;
+  thumb.onclick = playFn;
   document.getElementById('back-movie').onclick = function(){ navigate('peliculas'); };
 }
 
-function openSerie(id, type) {
+async function openSerie(id, type) {
   var arr = type==='anime' ? state.anime : state.series;
   var s = arr.find(function(x){ return x.id===id; });
+  if (!s) { var tbl=type==='anime'?'anime':'series'; var r=await db.from(tbl).select('*').eq('id',id).single(); s=r.data; }
   if (!s) return;
   navigate('player-serie');
   document.getElementById('ps-title').textContent = s.titulo;
   document.getElementById('ps-sinopsis').textContent = s.sinopsis || 'Sin sinopsis disponible.';
-  document.getElementById('ps-tags').innerHTML = '<span class="tag q"></span>'+(s.anio?'<span class="tag">'+s.anio+'</span>':'')+(s.genero?s.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+( s.plataforma?'<span class="tag">'+s.plataforma+'</span>':'');
+  document.getElementById('ps-tags').innerHTML = (s.anio?'<span class="tag">'+s.anio+'</span>':'')+(s.genero?s.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(s.plataforma?'<span class="tag">'+s.plataforma+'</span>':'');
   var thumb = document.getElementById('ps-thumb');
   if (s.poster_url) { thumb.innerHTML = '<img src="'+s.poster_url+'" style="width:100%;height:100%;object-fit:cover;"><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
   else { thumb.innerHTML = '<div style="width:100%;height:100%;background:'+rg()+';"></div><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
   document.getElementById('back-serie').onclick = function(){ navigate(type==='anime'?'anime':'series'); };
   var episodios = s.episodios || {};
   var tempNums = Object.keys(episodios).map(Number).sort(function(a,b){ return a-b; });
-  if (!tempNums.length) { document.getElementById('drop-temp').innerHTML = '<div class="drop-item">Sin temporadas</div>'; document.getElementById('drop-ep').innerHTML = '<div class="drop-item">Sin episodios</div>'; document.getElementById('ps-ep-title').textContent = 'Sin episodios cargados'; return; }
+  if (!tempNums.length) { document.getElementById('drop-temp').innerHTML='<div class="drop-item">Sin temporadas</div>'; document.getElementById('drop-ep').innerHTML='<div class="drop-item">Sin episodios</div>'; document.getElementById('ps-ep-title').textContent='Sin episodios cargados'; return; }
   var curTemp = tempNums[0], curEp = 0;
   function buildDrops() {
     document.getElementById('sel-temp-val').textContent = 'Temporada '+curTemp;
@@ -853,12 +922,12 @@ function openSerie(id, type) {
     document.getElementById('sel-ep-val').textContent = eps[curEp] ? 'Episodio '+(curEp+1) : '—';
     document.getElementById('drop-ep').innerHTML = eps.map(function(e,i){ return '<div class="drop-item'+(i===curEp?' selected':'')+'" onclick="window._selEp('+i+')">Episodio '+(i+1)+(e.titulo?' — '+e.titulo:'')+'</div>'; }).join('');
     var ep = eps[curEp];
-    document.getElementById('ps-ep-title').textContent = 'T'+curTemp+' · Ep '+(curEp+1)+(ep&&ep.titulo?' — '+ep.titulo:'');
-    document.getElementById('ps-btn').onclick = function(){ if (!ep || !ep.link) return alert('Link no disponible'); if (window.Android) Android.playVideo(ep.link, s.titulo + ' T'+curTemp+' Ep'+(curEp+1)); else window.open(ep.link, '_blank'); };
-    thumb.onclick = function(){ if (!ep || !ep.link) return; if (window.Android) Android.playVideo(ep.link, s.titulo + ' T'+curTemp+' Ep'+(curEp+1)); else window.open(ep.link, '_blank'); };
+    document.getElementById('ps-ep-title').textContent = 'T'+curTemp+' Ep '+(curEp+1)+(ep&&ep.titulo?' — '+ep.titulo:'');
+    document.getElementById('ps-btn').onclick = function(){ if (!ep||!ep.link) return alert('Link no disponible'); if (window.Android) Android.playVideo(ep.link, s.titulo+' T'+curTemp+' Ep'+(curEp+1)); else window.open(ep.link,'_blank'); };
+    thumb.onclick = function(){ if (!ep||!ep.link) return; if (window.Android) Android.playVideo(ep.link, s.titulo+' T'+curTemp+' Ep'+(curEp+1)); else window.open(ep.link,'_blank'); };
   }
   window._selTemp = function(t){ curTemp=t; curEp=0; buildDrops(); document.getElementById('drop-temp').classList.remove('open'); };
-  window._selEp = function(i){ curEp=i; buildDrops(); document.getElementById('drop-ep').classList.remove('open'); };
+  window._selEp   = function(i){ curEp=i; buildDrops(); document.getElementById('drop-ep').classList.remove('open'); };
   buildDrops();
 }
 
@@ -869,11 +938,11 @@ function openCanal(id) {
   var logo = document.getElementById('pc-logo');
   if (c.logo_url) { logo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">'; logo.style.background = '#141414'; }
   else { logo.innerHTML = '<span>'+(c.siglas||c.nombre.substring(0,3).toUpperCase())+'</span>'; logo.style.background = c.color||'#555'; }
-  var videoLogo = document.getElementById('pc-video-logo');
-  if (c.logo_url) { videoLogo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">'; videoLogo.style.display = 'block'; }
-  else { videoLogo.style.display = 'none'; }
+  var vl = document.getElementById('pc-video-logo');
+  if (c.logo_url) { vl.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">'; vl.style.display = 'block'; }
+  else { vl.style.display = 'none'; }
   document.getElementById('pc-name').textContent = c.nombre;
-  document.getElementById('pc-prog').textContent = c.nombre + ' — Transmisión en vivo';
+  document.getElementById('pc-prog').textContent = c.nombre + ' — Transmision en vivo';
   _canalLink = c.link_stream;
   var openFn = function(){ if(_canalLink) window.open(_canalLink,'_blank'); };
   document.getElementById('pc-video').onclick = openFn;
@@ -892,10 +961,10 @@ function toggleDrop(id) {
       items.forEach(function(item, i) {
         item.setAttribute('tabindex', '0');
         item.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
-          if (e.key === 'ArrowDown' && items[i+1]) { e.preventDefault(); items[i+1].focus(); }
-          if (e.key === 'ArrowUp' && items[i-1]) { e.preventDefault(); items[i-1].focus(); }
-          if (e.key === 'Escape') { d.classList.remove('open'); }
+          if (e.key==='Enter'||e.key===' ') { e.preventDefault(); item.click(); }
+          if (e.key==='ArrowDown' && items[i+1]) { e.preventDefault(); items[i+1].focus(); }
+          if (e.key==='ArrowUp'   && items[i-1]) { e.preventDefault(); items[i-1].focus(); }
+          if (e.key==='Escape') { d.classList.remove('open'); }
         });
       });
       if (items.length) items[0].focus();
@@ -906,126 +975,86 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
 
 (function() {
   function makeFocusable() {
-    var selectors = ['.nav-item','.tab','.ch-card','.movie-card','.series-card','.tv-card','.content-card','.plat-card','.cat-card','.watch-btn','.pf-btn','.match-card','.back-btn','.ver-mas','.selector','.prov-tag','.searchbar'];
-    selectors.forEach(function(sel) {
+    ['.nav-item','.tab','.ch-card','.movie-card','.series-card','.tv-card','.content-card','.plat-card','.cat-card','.watch-btn','.back-btn','.ver-mas','.selector','.searchbar','.loadmore-btn'].forEach(function(sel) {
       document.querySelectorAll(sel).forEach(function(el) {
-        if (!el.getAttribute('tabindex')) el.setAttribute('tabindex', '0');
-        el.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
-        });
+        if (!el.getAttribute('tabindex')) el.setAttribute('tabindex','0');
+        el.addEventListener('keydown', function(e) { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); el.click(); } });
       });
     });
   }
-
-  // CAMBIO 4: .searchbar agregado a FOCUSABLE
-  var FOCUSABLE = '.nav-item,.tab,.ch-card,.movie-card,.series-card,.tv-card,.content-card,.plat-card,.cat-card,.watch-btn,.pf-btn,.back-btn,.ver-mas,.selector,.sub-btn,.match-card,.prov-tag,.match-big,.canal-modal-btn,.searchbar';
-
+  var FOCUSABLE = '.nav-item,.tab,.ch-card,.movie-card,.series-card,.tv-card,.content-card,.plat-card,.cat-card,.watch-btn,.back-btn,.ver-mas,.selector,.sub-btn,.match-card,.match-big,.canal-modal-btn,.searchbar,.loadmore-btn';
   function getFocusables() {
     return Array.from(document.querySelectorAll(FOCUSABLE)).filter(function(el) {
       var r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && !el.closest('.panel:not(.active)');
     });
   }
-
   function findNearest(focusables, focused, direction) {
     var fr = focused.getBoundingClientRect();
-    var fcx = fr.left + fr.width/2, fcy = fr.top + fr.height/2;
+    var fcx = fr.left+fr.width/2, fcy = fr.top+fr.height/2;
     var best = null, bestScore = Infinity;
     focusables.forEach(function(el) {
-      if (el === focused) return;
+      if (el===focused) return;
       var r = el.getBoundingClientRect();
-      var cx = r.left + r.width/2, cy = r.top + r.height/2;
-      var dx = cx - fcx, dy = cy - fcy;
-      var inDir = false;
-      if (direction === 'right' && dx > 10) inDir = true;
-      if (direction === 'left'  && dx < -10) inDir = true;
-      if (direction === 'down'  && dy > 10) inDir = true;
-      if (direction === 'up'    && dy < -10) inDir = true;
+      var cx = r.left+r.width/2, cy = r.top+r.height/2;
+      var dx = cx-fcx, dy = cy-fcy, inDir = false;
+      if (direction==='right' && dx>10) inDir=true;
+      if (direction==='left'  && dx<-10) inDir=true;
+      if (direction==='down'  && dy>10) inDir=true;
+      if (direction==='up'    && dy<-10) inDir=true;
       if (!inDir) return;
-      var primary = (direction==='right'||direction==='left') ? Math.abs(dx) : Math.abs(dy);
+      var primary   = (direction==='right'||direction==='left') ? Math.abs(dx) : Math.abs(dy);
       var secondary = (direction==='right'||direction==='left') ? Math.abs(dy) : Math.abs(dx);
-      var score = primary + secondary * 2;
-      if (score < bestScore) { bestScore = score; best = el; }
+      var score = primary + secondary*2;
+      if (score < bestScore) { bestScore=score; best=el; }
     });
     return best;
   }
-
   document.addEventListener('keydown', function(e) {
-    // CAMBIO 3: no interceptar si hay un input activo
-    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-      return;
-    }
-
+    if (document.activeElement && (document.activeElement.tagName==='INPUT' || document.activeElement.tagName==='TEXTAREA')) return;
     var modalBg = document.getElementById('partido-modal-bg');
     if (modalBg && modalBg.classList.contains('open')) {
       var btns = Array.from(modalBg.querySelectorAll('.canal-modal-btn'));
-      var focused = document.activeElement;
-      var idx = btns.indexOf(focused);
-      if (e.key === 'ArrowDown') { e.preventDefault(); if (btns[idx+1]) btns[idx+1].focus(); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); if (idx > 0 && btns[idx-1]) btns[idx-1].focus(); return; }
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (focused && focused.href) focused.click(); return; }
-      if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack') { e.preventDefault(); modalBg.classList.remove('open'); return; }
+      var focused = document.activeElement, idx = btns.indexOf(focused);
+      if (e.key==='ArrowDown') { e.preventDefault(); if(btns[idx+1]) btns[idx+1].focus(); return; }
+      if (e.key==='ArrowUp')   { e.preventDefault(); if(idx>0&&btns[idx-1]) btns[idx-1].focus(); return; }
+      if (e.key==='Enter'||e.key===' ') { e.preventDefault(); if(focused&&focused.href) focused.click(); return; }
+      if (e.key==='Escape'||e.key==='Backspace'||e.key==='GoBack') { e.preventDefault(); modalBg.classList.remove('open'); return; }
       return;
     }
-
-    var focused = document.activeElement;
-    var focusables = getFocusables();
-
-    if (!focused || focused === document.body || !focusables.includes(focused)) {
-      var first = document.querySelector('.panel.active .nav-item, .panel.active .ch-card, .panel.active .movie-card');
-      if (!first) first = focusables[0];
-      if (first) { first.focus(); first.scrollIntoView({block:'nearest',inline:'nearest'}); }
-      return;
+    var focused = document.activeElement, focusables = getFocusables();
+    if (!focused||focused===document.body||!focusables.includes(focused)) {
+      var first = focusables[0]; if(first){first.focus();first.scrollIntoView({block:'nearest',inline:'nearest'});} return;
     }
-
-    // Cuando se presiona Arriba desde un tab, ir directo al searchbar
-    if (e.key === 'ArrowUp' && focused.classList.contains('tab')) {
-      var activePanel = document.querySelector('.panel.active');
-      var searchbar = activePanel ? activePanel.querySelector('.searchbar') : null;
-      if (searchbar) {
-        e.preventDefault();
-        searchbar.focus();
-        searchbar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        return;
-      }
+    if (e.key==='ArrowUp' && focused.classList.contains('tab')) {
+      var sb = document.querySelector('.panel.active .searchbar');
+      if (sb) { e.preventDefault(); sb.focus(); sb.scrollIntoView({behavior:'smooth',block:'nearest'}); return; }
     }
-
-    var next = null, dir = null;
-    if (e.key === 'ArrowRight') { dir = 'right'; e.preventDefault(); }
-    else if (e.key === 'ArrowLeft') { dir = 'left'; e.preventDefault(); }
-    else if (e.key === 'ArrowDown') { dir = 'down'; e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { dir = 'up'; e.preventDefault(); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focused.click(); return; }
-    else if (e.key === 'Backspace' || e.key === 'GoBack') {
-      var backBtn = document.querySelector('.panel.active .back-btn');
-      if (backBtn) backBtn.click();
-      e.preventDefault(); return;
-    }
-
-    if (dir) {
-      next = findNearest(focusables, focused, dir);
-      if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' }); }
-    }
+    var next=null, dir=null;
+    if (e.key==='ArrowRight') { dir='right'; e.preventDefault(); }
+    else if (e.key==='ArrowLeft')  { dir='left';  e.preventDefault(); }
+    else if (e.key==='ArrowDown')  { dir='down';  e.preventDefault(); }
+    else if (e.key==='ArrowUp')    { dir='up';    e.preventDefault(); }
+    else if (e.key==='Enter'||e.key===' ') { e.preventDefault(); focused.click(); return; }
+    else if (e.key==='Backspace'||e.key==='GoBack') { var bb=document.querySelector('.panel.active .back-btn'); if(bb) bb.click(); e.preventDefault(); return; }
+    if (dir) { next=findNearest(focusables,focused,dir); if(next){next.focus();next.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});} }
   });
-
-  var observer = new MutationObserver(function() { makeFocusable(); });
-  observer.observe(document.body, { childList: true, subtree: true });
+  var observer = new MutationObserver(function(){ makeFocusable(); });
+  observer.observe(document.body, { childList:true, subtree:true });
   makeFocusable();
 })();
 </script>
 
-<!-- MODAL PARTIDO -->
 <div class="partido-modal-bg" id="partido-modal-bg" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="partido-modal-box">
     <div class="partido-modal-header">
-      <div class="partido-modal-title">⚽ Ver partido</div>
-      <div class="partido-modal-close" onclick="document.getElementById('partido-modal-bg').classList.remove('open')">✕</div>
+      <div class="partido-modal-title">Ver partido</div>
+      <div class="partido-modal-close" onclick="document.getElementById('partido-modal-bg').classList.remove('open')">x</div>
     </div>
     <div id="partido-modal-content"></div>
   </div>
 </div>
 
-<!-- VISOR WEB -->
 <div class="viewer-modal" id="viewer-modal">
   <div class="viewer-bar">
     <div class="viewer-logo">Cine<em>tra</em></div>
