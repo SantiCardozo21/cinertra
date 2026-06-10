@@ -52,7 +52,7 @@ async function resolveStreamwish(embedUrl) {
       }
     }
     return null;
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 
 async function resolveVoe(embedUrl) {
@@ -69,7 +69,7 @@ async function resolveVoe(embedUrl) {
                   html.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
     if (match) return (match[1] || match[0]).replace(/\\/g, '');
     return null;
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 
 export default async function handler(req) {
@@ -86,11 +86,10 @@ export default async function handler(req) {
   try {
     const slug = pageUrl.split('/').pop();
 
-    // 1. Obtener info de la película
     const movieResult = await fetchMovieInfo(slug);
     if (!movieResult.ok) {
-      return new Response(JSON.stringify({ 
-        error: 'No se pudo obtener info de la película', 
+      return new Response(JSON.stringify({
+        error: 'No se pudo obtener info de la pelicula',
         slug,
         status: movieResult.error,
         detail: movieResult.text?.substring(0, 300)
@@ -100,23 +99,19 @@ export default async function handler(req) {
       });
     }
 
-    const movieHtml = movieResult.text;
-
-    // 2. Extraer URLs de los players
-    const playerUrls = extractPlayerUrls(movieHtml);
+    const playerUrls = extractPlayerUrls(movieResult.text);
 
     if (!playerUrls.length) {
-      return new Response(JSON.stringify({ 
-        error: 'No se encontraron servidores', 
+      return new Response(JSON.stringify({
+        error: 'No se encontraron servidores',
         slug,
-        htmlPreview: movieHtml.substring(0, 500)
+        htmlPreview: movieResult.text.substring(0, 500)
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // Debug: ver HTML del primer servidor
     const debugServer = url.searchParams.get('debug');
     if (debugServer) {
       const res = await fetch(playerUrls[2], {
@@ -126,7 +121,7 @@ export default async function handler(req) {
         }
       });
       const html = await res.text();
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         server: playerUrls[0],
         status: res.status,
         htmlPreview: html.substring(0, 2000)
@@ -135,10 +130,8 @@ export default async function handler(req) {
       });
     }
 
-    // 3. Probar cada servidor hasta encontrar el m3u8
     for (const playerUrl of playerUrls) {
       let m3u8 = null;
-
       if (playerUrl.includes('streamwish') || playerUrl.includes('bysesukior') || playerUrl.includes('playnixes')) {
         m3u8 = await resolveStreamwish(playerUrl);
       } else if (playerUrl.includes('voe.sx')) {
@@ -146,13 +139,9 @@ export default async function handler(req) {
       } else {
         m3u8 = await resolveStreamwish(playerUrl);
       }
-
       if (m3u8) {
         return new Response(JSON.stringify({
-          ok: true,
-          m3u8,
-          server: playerUrl,
-          allServers: playerUrls
+          ok: true, m3u8, server: playerUrl, allServers: playerUrls
         }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
@@ -160,8 +149,7 @@ export default async function handler(req) {
     }
 
     return new Response(JSON.stringify({
-      error: 'No se pudo resolver el m3u8',
-      servers: playerUrls
+      error: 'No se pudo resolver el m3u8', servers: playerUrls
     }), {
       status: 404,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
