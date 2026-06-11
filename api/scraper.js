@@ -685,6 +685,23 @@ export default async function handler(req) {
       logs.push(`Enrich anime: ${count} enriquecidos`);
     }
 
+    if (source === 'debug-jj') {
+      const html = await fetchPage('https://jjfutbol2.lat/index.php');
+      if (!html) { logs.push('No se pudo cargar jjfutbol2.lat'); }
+      else {
+        logs.push('Longitud HTML: ' + html.length);
+        // Mostrar primeros 2000 chars sin tags para ver estructura
+        const txt = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,2000);
+        logs.push('Texto: ' + txt);
+        // Buscar patrones de hora y equipos
+        const times = html.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/g) || [];
+        logs.push('Horas encontradas: ' + [...new Set(times)].join(', '));
+        // Buscar links de evento
+        const events = html.match(/evento\.php\?[^"'\s]+/g) || [];
+        logs.push('Links evento: ' + [...new Set(events)].slice(0,10).join(' | '));
+      }
+    }
+
     if (source === 'delete-partidos') {
       const del = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
         method: 'DELETE',
