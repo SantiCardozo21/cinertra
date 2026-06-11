@@ -585,6 +585,13 @@ var _pg = {
 var _canalLink = '';
 var grads = ['linear-gradient(135deg,#1a237e,#1565C0)','linear-gradient(135deg,#1b5e20,#388E3C)','linear-gradient(135deg,#4a148c,#7B1FA2)','linear-gradient(135deg,#b71c1c,#E53935)','linear-gradient(135deg,#004d40,#00796B)','linear-gradient(135deg,#1a237e,#3949AB)','linear-gradient(135deg,#3e2723,#795548)','linear-gradient(135deg,#880E4F,#E91E63)'];
 function rg() { return grads[Math.floor(Math.random()*grads.length)]; }
+function imgFail(img) {
+  var p = img.parentNode;
+  p.style.background = img.dataset.color || '#555';
+  p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center';
+  p.style.fontSize = '13px'; p.style.fontWeight = '700'; p.style.color = '#fff';
+  p.textContent = img.dataset.fb || '?';
+}
 
 function getDeviceId() {
   var id = localStorage.getItem('cinetra_device_id');
@@ -730,8 +737,9 @@ async function loadAll() {
 function renderHome() {
   var hc = document.getElementById('home-canales');
   hc.innerHTML = state.canales.slice(0,6).map(function(c) {
-    var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" onerror="this.hidden=true">' : '<div class="ch-dot" style="background:'+(c.color||'#555')+'">'+(c.siglas||c.nombre.substring(0,3).toUpperCase())+'</div>';
-    return '<div class="ch-card" onclick="openCanal(\''+c.id+'\')">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    var fb=c.siglas||c.nombre.substring(0,3).toUpperCase(), bg=c.color||'#555';
+    var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">' : '<div class="ch-dot" style="background:'+bg+'">'+fb+'</div>';
+    return '<div class="ch-card" data-id="'+c.id+'" onclick="openCanal(this.dataset.id)">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales</div>';
   document.getElementById('home-peliculas').innerHTML = state.peliculas.slice(0,6).map(movieCardHTML).join('') || '<div class="empty">Sin peliculas</div>';
   document.getElementById('home-series').innerHTML = state.series.slice(0,5).map(function(s){ return seriesRowHTML(s,'series'); }).join('') || '<div class="empty">Sin series</div>';
@@ -751,8 +759,9 @@ function renderTV(filtro) {
   filtro = filtro || 'todos';
   var list = filtro==='todos' ? state.canales : state.canales.filter(function(c){ return c.categoria===filtro; });
   document.getElementById('tv-grid').innerHTML = list.map(function(c) {
-    var logo = c.logo_url ? '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" onerror="this.hidden=true">' : (c.siglas||c.nombre.substring(0,3).toUpperCase());
-    return '<div class="tv-card" onclick="openCanal(\''+c.id+'\')"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':(c.color||'#555'))+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    var fb = c.siglas||c.nombre.substring(0,3).toUpperCase(), bg = c.color||'#555';
+    var logo = c.logo_url ? '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">' : fb;
+    return '<div class="tv-card" data-id="'+c.id+'" onclick="openCanal(this.dataset.id)"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':bg)+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales en esta categoria</div>';
 }
 function filterTV(cat, el) { document.querySelectorAll('#tv-tabs .tab').forEach(function(t){ t.classList.remove('active'); }); el.classList.add('active'); renderTV(cat); }
@@ -936,8 +945,9 @@ function openCanal(id) {
   if (!c) return;
   navigate('player-canal');
   var logo = document.getElementById('pc-logo');
-  if (c.logo_url) { logo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">'; logo.style.background = '#141414'; }
-  else { logo.innerHTML = '<span>'+(c.siglas||c.nombre.substring(0,3).toUpperCase())+'</span>'; logo.style.background = c.color||'#555'; }
+  var fb = c.siglas||c.nombre.substring(0,3).toUpperCase(), bg = c.color||'#555';
+  if (c.logo_url) { logo.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">'; logo.style.background = '#141414'; }
+  else { logo.innerHTML = '<span>'+fb+'</span>'; logo.style.background = bg; }
   var vl = document.getElementById('pc-video-logo');
   if (c.logo_url) { vl.innerHTML = '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;">'; vl.style.display = 'block'; }
   else { vl.style.display = 'none'; }
