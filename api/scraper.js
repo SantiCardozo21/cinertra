@@ -530,8 +530,16 @@ async function scrapeJJFutbol() {
     });
   }
 
-  if (partidos.length) await dbInsert('partidos', partidos);
-  return [`JJFutbol: ${partidos.length} partidos cargados (delete: ${delRes.status})`];
+  if (partidos.length) {
+    const ins = await fetch(`${SUPABASE_URL}/rest/v1/partidos`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(partidos)
+    });
+    const insText = ins.ok ? 'ok' : await ins.text();
+    return [`JJFutbol: ${partidos.length} armados, insert=${ins.status} ${insText}`];
+  }
+  return [`JJFutbol: 0 partidos parseados`];
 }
 
 
