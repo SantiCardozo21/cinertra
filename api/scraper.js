@@ -466,20 +466,18 @@ async function scrapeJJFutbol() {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
   });
 
-  // Probar con headers de browser para evitar 405
-  let res = null;
-  const headers405 = [
-    { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Origin': 'https://jjfutbol2.lat', 'Referer': 'https://jjfutbol2.lat/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36' },
-    { 'Accept': '*/*', 'X-Requested-With': 'XMLHttpRequest', 'Referer': 'https://jjfutbol2.lat/index.php' },
-  ];
-  for (const h of headers405) {
-    res = await fetch('https://jjfutbol2.lat/agenda.php', { method: 'GET', headers: h });
-    if (res.ok) break;
-    // Intentar POST si GET falla
-    res = await fetch('https://jjfutbol2.lat/agenda.php', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: '{}' });
-    if (res.ok) break;
-  }
-  if (!res || !res.ok) return [`JJFutbol: error ${res ? res.status : 'sin respuesta'}`];
+  // Token estático hardcodeado en el JS de la página
+  const JJTOKEN = 'TU_TOKEN_SECRETO_AQUI_32_CHARS__';
+  const res = await fetch('https://jjfutbol2.lat/agenda.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Origin': 'https://jjfutbol2.lat',
+      'Referer': 'https://jjfutbol2.lat/index.php'
+    },
+    body: 'token=' + encodeURIComponent(JJTOKEN)
+  });
+  if (!res.ok) return [`JJFutbol: error ${res.status}`];
 
   const data = await res.json().catch(_e => null);
   if (!Array.isArray(data)) return ['JJFutbol: respuesta invalida'];
@@ -511,10 +509,11 @@ async function scrapeJJFutbol() {
       matchUTC = new Date(matchUTC.getTime() + 24 * 3600000);
     }
 
-    // Canales con links directos
+    // Canales con links completos (igual que el sitio original)
+    const tituloClean = titulo.replace(/\s+/g,' ').trim();
     const canales = (item.canales || []).map(c => ({
       nombre: c.canal,
-      link: `https://jjfutbol2.lat/evento.php?id=${c.canal_id}`
+      link: `https://jjfutbol2.lat/evento.php?id=${encodeURIComponent(c.canal_id)}&t=${encodeURIComponent(tituloClean)}&c=${encodeURIComponent(c.canal)}`
     }));
 
     partidos.push({
