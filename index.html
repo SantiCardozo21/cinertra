@@ -800,7 +800,9 @@ function matchBigHTML(p) {
   var ahora = new Date(), diff = new Date(p.fecha) - ahora;
   var isLive = p.en_vivo || (diff <= 0 && diff > -120*60000);
   var isSoon = !isLive && diff > 0 && diff < 30*60*1000;
-  var hora = new Date(p.fecha).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' hs';
+  var arMs = new Date(p.fecha).getTime() - 3*3600000;
+  var arD2 = new Date(arMs);
+  var hora = arD2.getUTCHours().toString().padStart(2,'0')+':'+arD2.getUTCMinutes().toString().padStart(2,'0')+' hs';
   var statusBadge = isLive ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>' : isSoon ? '<div class="match-status-badge soon">EN BREVE</div>' : '<div class="match-status-badge next">PROXIMO</div>';
   var canalesCount = (p.canales||[]).length;
   var canalesHint = canalesCount ? '<div class="match-canales-hint">'+canalesCount+' canal'+(canalesCount>1?' disponibles':' disponible')+'</div>' : '<div class="match-canales-hint" style="color:#333;">Sin canales</div>';
