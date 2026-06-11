@@ -460,154 +460,85 @@ async function scrapeAnimeFLVPage(page) {
 }
 
 // -- Pelota Libre --------------------------------------------------------------
-async function scrapePelotaLibre() {
-  // Borrar TODOS los partidos viejos antes de insertar los nuevos
+async function scrapeJJFutbol() {
   const delRes = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
     method: 'DELETE',
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Prefer': 'return=minimal'
-    }
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
   });
 
-  const CDN = 'https://cdn.pelotalibretv.su/wp-content/uploads/2022/12';
-  const canales = [
-    { nombre: 'TyC Sports',     siglas: 'TYC',  categoria: 'deportes', color: '#1a6e1a', logo_url: `${CDN}/tyc-e1671629028653.jpg`,                              link_stream: 'https://pelotalibretv.su/tyc-sports/' },
-    { nombre: 'ESPN',           siglas: 'ESPN', categoria: 'deportes', color: '#cc0000', logo_url: `${CDN}/imgonline-com-ua-resize-nCeSNh07YHyhg-1.jpg`,          link_stream: 'https://pelotalibretv.su/espn-1/' },
-    { nombre: 'ESPN Premium',   siglas: 'ESP+', categoria: 'deportes', color: '#cc0000', logo_url: `${CDN}/ESPN_Premium-1-e1671629245648.png`,                    link_stream: 'https://pelotalibretv.su/espn-premium/' },
-    { nombre: 'Fox Sports',     siglas: 'FOX',  categoria: 'deportes', color: '#004080', logo_url: `${CDN}/Fox_Sports-e1671629328815.png`,                        link_stream: 'https://pelotalibretv.su/fox-sports/' },
-    { nombre: 'TNT Sports',     siglas: 'TNT',  categoria: 'deportes', color: '#7b0000', logo_url: `${CDN}/TNT_Sports-e1671628894478.png`,                        link_stream: 'https://pelotalibretv.su/tnt-sports/' },
-    { nombre: 'DirecTV Sports', siglas: 'DTV',  categoria: 'deportes', color: '#0064ff', logo_url: `${CDN}/DirecTV_Sports.png`,                                   link_stream: 'https://pelotalibretv.su/directv-sports/' },
-    { nombre: 'TV Pública',     siglas: 'TVP',  categoria: 'deportes', color: '#006400', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/TV_P%C3%BAblica_Argentina.svg/200px-TV_P%C3%BAblica_Argentina.svg.png', link_stream: 'https://pelotalibretv.su/tv-publica/' },
-    { nombre: 'DeporTV',        siglas: 'DEP',  categoria: 'deportes', color: '#1a237e', logo_url: `${CDN}/DeporTV-e1671629412883.png`,                           link_stream: 'https://pelotalibretv.su/deportv/' },
-  ];
-  // ignore-duplicates: NO toca canales de TV en vivo que ya existen con el mismo nombre
-  await fetch(`${SUPABASE_URL}/rest/v1/canales?on_conflict=nombre`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-    body: JSON.stringify(canales)
+  const res = await fetch('https://jjfutbol2.lat/agenda.php', {
+    headers: { 'Accept': 'application/json', 'Referer': 'https://jjfutbol2.lat/' }
   });
+  if (!res.ok) return [`JJFutbol: error ${res.status}`];
 
-  const html = await fetchPage('https://pelotalibretv.su/agenda/');
+  const data = await res.json().catch(_e => null);
+  if (!Array.isArray(data)) return ['JJFutbol: respuesta invalida'];
+
+  // Argentina = UTC-3
+  const nowMs = Date.now();
+  const nowAR = new Date(nowMs - 3 * 3600000);
+  const arY = nowAR.getUTCFullYear(), arM = nowAR.getUTCMonth(), arD = nowAR.getUTCDate();
+
   const partidos = [];
-  if (html) {
-    // Argentina = UTC-3. Hora actual en Argentina:
-    const nowMs = Date.now();
-    const nowAR = new Date(nowMs - 3 * 3600000);
-    const arY = nowAR.getUTCFullYear();
-    const arM = nowAR.getUTCMonth();
-    const arD = nowAR.getUTCDate();
+  const seen = new Set();
 
-    const vsRegex = /([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})\s+(?:vs\.?|VS\.?)\s+([A-ZÁÉÍÓÚ][a-záéíóúA-ZÁÉÍÓÚ\s]{2,25})/g;
-    const seen = new Set();
-    let m;
+  for (const item of data) {
+    const titulo = (item.titulo || '').replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+    // Extraer equipos: "Categoria: Local vs Visitante" o "Local vs Visitante"
+    const vsMatch = titulo.match(/^(?:.+?[:\-\u2013]\s*)?(.+?)\s+vs\s+(.+)$/i);
+    if (!vsMatch) continue;
+    const local = vsMatch[1].trim(), visit = vsMatch[2].trim();
+    if (local.length < 2 || visit.length < 2) continue;
+    const key = local.toLowerCase() + '-' + visit.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
 
-    while ((m = vsRegex.exec(html)) !== null && partidos.length < 20) {
-      const local = m[1].trim(), visit = m[2].trim();
-      if (local.length < 2 || visit.length < 2) continue;
-      const key = `${local.toLowerCase()}-${visit.toLowerCase()}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      // Buscar HH:MM en el contexto cercano (~400 chars antes del partido)
-      const ctx = html.substring(Math.max(0, m.index - 400), Math.min(html.length, m.index + 400));
-      const tMatch = ctx.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
-
-      let fecha;
-      if (tMatch) {
-        const mH = parseInt(tMatch[1]);
-        const mMin = parseInt(tMatch[2]);
-        // Hora AR -> UTC (AR = UTC-3, UTC = AR + 3h)
-        let matchUTC = new Date(Date.UTC(arY, arM, arD, mH + 3, mMin));
-        // Si el partido quedó más de 4h en el pasado, es mañana
-        if (nowMs - matchUTC.getTime() > 4 * 3600000) {
-          matchUTC = new Date(matchUTC.getTime() + 24 * 3600000);
-        }
-        fecha = matchUTC.toISOString();
-      } else {
-        fecha = new Date().toISOString();
-      }
-
-      partidos.push({
-        equipo_local: local, equipo_visit: visit,
-        sigla_local: local.substring(0,3).toUpperCase(),
-        sigla_visit: visit.substring(0,3).toUpperCase(),
-        color_local: '#1565c0', color_visit: '#c62828',
-        fecha, en_vivo: false,
-        canales: [], proveedores: [], link_tyc: ''
-      });
+    // Convertir hora AR a UTC
+    const parts = (item.hora || '00:00').split(':');
+    const mH = parseInt(parts[0]) || 0, mMin = parseInt(parts[1]) || 0;
+    let matchUTC = new Date(Date.UTC(arY, arM, arD, mH + 3, mMin));
+    if (nowMs - matchUTC.getTime() > 4 * 3600000) {
+      matchUTC = new Date(matchUTC.getTime() + 24 * 3600000);
     }
-    if (partidos.length) await dbInsert('partidos', partidos);
+
+    // Canales con links directos
+    const canales = (item.canales || []).map(c => ({
+      nombre: c.canal,
+      link: `https://jjfutbol2.lat/evento.php?id=${c.canal_id}`
+    }));
+
+    partidos.push({
+      equipo_local: local, equipo_visit: visit,
+      sigla_local: local.substring(0,3).toUpperCase(),
+      sigla_visit: visit.substring(0,3).toUpperCase(),
+      color_local: '#1565c0', color_visit: '#c62828',
+      fecha: matchUTC.toISOString(),
+      en_vivo: false,
+      liga: item.categoria || '',
+      canales,
+      proveedores: canales.map(c => c.nombre),
+      link_tyc: canales[0] ? canales[0].link : ''
+    });
   }
-  return [`PelotaLibre: ${partidos.length} partidos (delete: ${delRes.status})`];
+
+  if (partidos.length) await dbInsert('partidos', partidos);
+  return [`JJFutbol: ${partidos.length} partidos cargados (delete: ${delRes.status})`];
 }
 
-// -- Enriquecimiento de partidos con canales -----------------------------------
+
+// -- Enriquecimiento de partidos (ya incluido en JJFutbol, se mantiene para compatibilidad) --
 async function enrichPartidos() {
-  const html = await fetchPage('https://pelotalibretv.su/agenda/');
-  if (!html) return ['PelotaLibre agenda: no disponible'];
-
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/partidos?select=id,equipo_local,equipo_visit`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-  });
-  const partidos = await res.json();
-  if (!Array.isArray(partidos) || !partidos.length) return ['No hay partidos para enriquecer'];
-
-  const CANAL_MAP = {
-    'TyC Sports':     'https://pelotalibretv.su/tyc-sports/',
-    'ESPN':           'https://pelotalibretv.su/espn-1/',
-    'ESPN Premium':   'https://pelotalibretv.su/espn-premium/',
-    'Fox Sports':     'https://pelotalibretv.su/fox-sports/',
-    'TNT Sports':     'https://pelotalibretv.su/tnt-sports/',
-    'DirecTV Sports': 'https://pelotalibretv.su/directv-sports/',
-    'TV Pública':     'https://pelotalibretv.su/tv-publica/',
-    'DeporTV':        'https://pelotalibretv.su/deportv/',
-  };
-
-  let enriched = 0;
-  const htmlLow = html.toLowerCase();
-
-  for (const partido of partidos) {
-    const localLow = partido.equipo_local.toLowerCase().trim();
-    const idx = htmlLow.indexOf(localLow);
-    if (idx < 0) continue;
-
-    // Bloque de texto alrededor del partido (~800 chars después del equipo local)
-    const block = html.substring(Math.max(0, idx - 150), Math.min(html.length, idx + 800));
-    const blockLow = block.toLowerCase();
-
-    const proveedores = [];
-    let primaryLink = null;
-
-    for (const [nombre, url] of Object.entries(CANAL_MAP)) {
-      const slug = url.replace('https://pelotalibretv.su/', '').replace('/', '');
-      if (blockLow.includes(nombre.toLowerCase()) || block.includes(slug)) {
-        proveedores.push(nombre);
-        if (!primaryLink) primaryLink = url;
-      }
-    }
-
-    if (proveedores.length > 0) {
-      await fetch(`${SUPABASE_URL}/rest/v1/partidos?id=eq.${partido.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ proveedores, link_tyc: primaryLink, canales: proveedores.map(function(n){ return { nombre: n, link: CANAL_MAP[n] }; }) })
-      });
-      enriched++;
-    }
-  }
-  return [`Partidos enriquecidos: ${enriched}/${partidos.length}`];
+  return ['Enriquecimiento no necesario: JJFutbol ya incluye canales en el scrape inicial'];
 }
 
-
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+// ── HANDLER ──────────────────────────────────────────────────────────────────
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' };
 
 export default async function handler(req) {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   const url = new URL(req.url);
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   const secret = url.searchParams.get('secret');
-  if (secret !== SECRET) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: CORS });
+  if (secret !== 'cinetra-scraper-2024') return new Response('Unauthorized', { status: 401, headers: CORS });
   const source = url.searchParams.get('source') || '';
   const logs = [];
   const t = Date.now();
@@ -685,7 +616,7 @@ export default async function handler(req) {
       logs.push(`Enrich anime: ${count} enriquecidos`);
     }
 
-    if (source === 'debug-jj') {
+    if (source === 'debug-jj-disabled') {
       // Buscar endpoint de API en el JS de la pagina
       const html = await fetchPage('https://jjfutbol2.lat/index.php');
       if (!html) { logs.push('No se pudo cargar'); }
@@ -715,32 +646,6 @@ export default async function handler(req) {
     }
 
     if (source === 'delete-partidos') {
-      const html = await fetchPage('https://jjfutbol2.lat/index.php');
-      if (!html) { logs.push('No se pudo cargar jjfutbol2.lat'); }
-      else {
-        logs.push('Longitud: ' + html.length);
-        // Mostrar ultimos 3000 chars (donde suele estar el contenido)
-        logs.push('Final HTML: ' + html.slice(-3000).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
-        // Buscar data-* attributes con info de partidos
-        const dataAttrs = html.match(/data-[a-z]+="[^"]{1,60}"/g) || [];
-        logs.push('data-attrs: ' + [...new Set(dataAttrs)].slice(0,20).join(' | '));
-        // Buscar scripts con datos inline
-        const scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
-        for (const s of scripts) {
-          if (s.includes('partido') || s.includes('equipo') || s.includes('evento') || s.includes('match')) {
-            logs.push('Script con datos: ' + s.substring(0,500));
-          }
-        }
-        // JSON embebido
-        const jsons = html.match(/\[\{[^\[\]]{20,}\}\]/g) || [];
-        if (jsons.length) logs.push('JSON arrays: ' + jsons[0].substring(0,500));
-        // Chunk alrededor de evento.php
-        const idx = html.indexOf('evento.php');
-        if (idx >= 0) logs.push('Contexto evento: ' + html.substring(Math.max(0,idx-200), idx+300).replace(/\s+/g,' '));
-      }
-    }
-
-    if (source === 'delete-partidos') {
       const del = await fetch(`${SUPABASE_URL}/rest/v1/partidos?equipo_local=not.is.null`, {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' }
@@ -748,7 +653,7 @@ export default async function handler(req) {
       logs.push(`Partidos borrados (status: ${del.status})`);
     }
     if (source === 'futbol') {
-      logs.push(...await scrapePelotaLibre());
+      logs.push(...await scrapeJJFutbol());
     }
     if (source === 'enrich-partidos') {
       logs.push(...await enrichPartidos());
