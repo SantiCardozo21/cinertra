@@ -686,19 +686,57 @@ export default async function handler(req) {
     }
 
     if (source === 'debug-jj') {
+      // Buscar endpoint de API en el JS de la pagina
+      const html = await fetchPage('https://jjfutbol2.lat/index.php');
+      if (!html) { logs.push('No se pudo cargar'); }
+      else {
+        // Extraer todas las URLs de fetch/XHR en el JS
+        const fetches = html.match(/fetch\(['"`][^'"`]+['"`]/g) || [];
+        logs.push('Fetch calls: ' + fetches.join(' | '));
+        const xhrs = html.match(/\.open\(['"](GET|POST)['"],[^)]+\)/g) || [];
+        logs.push('XHR calls: ' + xhrs.join(' | '));
+        // Buscar .php y .json URLs
+        const phpUrls = html.match(/['"](\/?[a-z0-9_-]+\.php[^'"]*)['"]/g) || [];
+        logs.push('PHP URLs: ' + [...new Set(phpUrls)].slice(0,15).join(' | '));
+        const jsonUrls = html.match(/['"](\/?[a-z0-9_/-]+\.json[^'"]*)['"]/g) || [];
+        logs.push('JSON URLs: ' + jsonUrls.join(' | '));
+        // Ultimo bloque del HTML (contenido real)
+        const tail = html.slice(-2000).replace(/\s+/g,' ');
+        logs.push('Tail: ' + tail);
+      }
+      // Probar endpoints comunes directamente
+      for (const ep of ['api.php','get_partidos.php','partidos.php','agenda.php','events.php','data.php','matches.php']) {
+        const r = await fetch('https://jjfutbol2.lat/'+ep);
+        if (r.ok) {
+          const txt = await r.text();
+          logs.push('ENCONTRADO '+ep+': ' + txt.substring(0,300));
+        }
+      }
+    }
+
+    if (source === 'delete-partidos') {
       const html = await fetchPage('https://jjfutbol2.lat/index.php');
       if (!html) { logs.push('No se pudo cargar jjfutbol2.lat'); }
       else {
-        logs.push('Longitud HTML: ' + html.length);
-        // Mostrar primeros 2000 chars sin tags para ver estructura
-        const txt = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,2000);
-        logs.push('Texto: ' + txt);
-        // Buscar patrones de hora y equipos
-        const times = html.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/g) || [];
-        logs.push('Horas encontradas: ' + [...new Set(times)].join(', '));
-        // Buscar links de evento
-        const events = html.match(/evento\.php\?[^"'\s]+/g) || [];
-        logs.push('Links evento: ' + [...new Set(events)].slice(0,10).join(' | '));
+        logs.push('Longitud: ' + html.length);
+        // Mostrar ultimos 3000 chars (donde suele estar el contenido)
+        logs.push('Final HTML: ' + html.slice(-3000).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
+        // Buscar data-* attributes con info de partidos
+        const dataAttrs = html.match(/data-[a-z]+="[^"]{1,60}"/g) || [];
+        logs.push('data-attrs: ' + [...new Set(dataAttrs)].slice(0,20).join(' | '));
+        // Buscar scripts con datos inline
+        const scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
+        for (const s of scripts) {
+          if (s.includes('partido') || s.includes('equipo') || s.includes('evento') || s.includes('match')) {
+            logs.push('Script con datos: ' + s.substring(0,500));
+          }
+        }
+        // JSON embebido
+        const jsons = html.match(/\[\{[^\[\]]{20,}\}\]/g) || [];
+        if (jsons.length) logs.push('JSON arrays: ' + jsons[0].substring(0,500));
+        // Chunk alrededor de evento.php
+        const idx = html.indexOf('evento.php');
+        if (idx >= 0) logs.push('Contexto evento: ' + html.substring(Math.max(0,idx-200), idx+300).replace(/\s+/g,' '));
       }
     }
 
