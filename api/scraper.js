@@ -535,7 +535,7 @@ async function scrapePelotaLibre() {
         sigla_visit: visit.substring(0,3).toUpperCase(),
         color_local: '#1565c0', color_visit: '#c62828',
         fecha, en_vivo: false,
-        proveedores: ['tyc'], link_tyc: 'https://pelotalibretv.su'
+        canales: [], proveedores: [], link_tyc: ''
       });
     }
     if (partidos.length) await dbInsert('partidos', partidos);
@@ -592,7 +592,7 @@ async function enrichPartidos() {
       await fetch(`${SUPABASE_URL}/rest/v1/partidos?id=eq.${partido.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ proveedores, link_tyc: primaryLink })
+        body: JSON.stringify({ proveedores, link_tyc: primaryLink, canales: proveedores.map(function(n){ return { nombre: n, link: CANAL_MAP[n] }; }) })
       });
       enriched++;
     }
