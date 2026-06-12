@@ -743,7 +743,7 @@ function renderHome() {
   hc.innerHTML = state.canales.slice(0,6).map(function(c) {
     var fb=c.siglas||c.nombre.substring(0,3).toUpperCase(), bg=c.color||'#555';
     var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">' : '<div class="ch-dot" style="background:'+bg+'">'+fb+'</div>';
-    return '<div class="ch-card" data-id="'+c.id+'" onclick="openCanal(this.dataset.id)">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    return '<div class="ch-card" data-id="'+c.id+'" style="cursor:pointer">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales</div>';
   document.getElementById('home-peliculas').innerHTML = state.peliculas.slice(0,6).map(movieCardHTML).join('') || '<div class="empty">Sin peliculas</div>';
   document.getElementById('home-series').innerHTML = state.series.slice(0,5).map(function(s){ return seriesRowHTML(s,'series'); }).join('') || '<div class="empty">Sin series</div>';
@@ -752,11 +752,11 @@ function renderHome() {
 
 function movieCardHTML(p) {
   var img = p.poster_url ? '<img src="'+p.poster_url+'" onerror="this.hidden=true">' : '<div class="poster-bg" style="background:'+rg()+';width:100%;height:100%;"></div>';
-  return '<div class="movie-card" data-id="'+p.id+'" onclick="openPelicula(this.dataset.id)"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+( p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
+  return '<div class="movie-card" data-id="'+p.id+'" style="cursor:pointer"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+( p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
 }
 function seriesRowHTML(s, type) {
   var img = s.poster_url ? '<img src="'+s.poster_url+'" onerror="this.hidden=true">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
-  return '<div class="series-card" data-id="'+s.id+'" data-type="'+type+'" onclick="openSerie(this.dataset.id,this.dataset.type)"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
+  return '<div class="series-card" data-id="'+s.id+'" data-type="'+type+'" style="cursor:pointer"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
 }
 
 function renderTV(filtro) {
@@ -765,15 +765,14 @@ function renderTV(filtro) {
   document.getElementById('tv-grid').innerHTML = list.map(function(c) {
     var fb = c.siglas||c.nombre.substring(0,3).toUpperCase(), bg = c.color||'#555';
     var logo = c.logo_url ? '<img src="'+c.logo_url+'" style="width:100%;height:100%;object-fit:contain;" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">' : fb;
-    return '<div class="tv-card" data-id="'+c.id+'" onclick="openCanal(this.dataset.id)"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':bg)+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    return '<div class="tv-card" data-id="'+c.id+'" style="cursor:pointer"><div class="tv-logo" style="background:'+(c.logo_url?'#1a1a1a':bg)+'">'+logo+'</div><div class="tv-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales en esta categoria</div>';
 }
 function filterTV(cat, el) { document.querySelectorAll('#tv-tabs .tab').forEach(function(t){ t.classList.remove('active'); }); el.classList.add('active'); renderTV(cat); }
 
 function contentCardHTML(item, type) {
   var img = item.poster_url ? '<img src="'+item.poster_url+'" onerror="this.hidden=true">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
-  var fn = type==='pelicula' ? 'openPelicula(this.dataset.id)' : 'openSerie(this.dataset.id,this.dataset.type)';
-  return '<div class="content-card" data-id="'+item.id+'" data-type="'+type+'" onclick="'+fn+'"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'' )+'</div></div>';
+  return '<div class="content-card" data-id="'+item.id+'" data-type="'+type+'" style="cursor:pointer"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'' )+'</div></div>';
 }
 function renderGrid(type, data) {
   var el = document.getElementById(type+'-grid');
@@ -810,7 +809,7 @@ function matchBigHTML(p) {
   var statusBadge = isLive ? '<div class="match-status-badge live"><span class="live-pulse"></span> EN VIVO</div>' : isSoon ? '<div class="match-status-badge soon">EN BREVE</div>' : '<div class="match-status-badge next">PROXIMO</div>';
   var canalesCount = (p.canales||[]).length;
   var canalesHint = canalesCount ? '<div class="match-canales-hint">'+canalesCount+' canal'+(canalesCount>1?' disponibles':' disponible')+'</div>' : '<div class="match-canales-hint" style="color:#333;">Sin canales</div>';
-  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" data-id="'+p.id+'" onclick="openPartidoModal(this.dataset.id)" tabindex="0">'+
+  return '<div class="match-big '+(isLive?'live':isSoon?'soon':'')+'" data-id="'+p.id+'" style="cursor:pointer" tabindex="0">'+
     '<div class="match-status-bar">'+statusBadge+'<div class="match-hora">'+(isLive?'LIVE':hora)+'</div></div>'+
     '<div class="match-teams-big">'+
     '<div class="match-team"><div class="team-escudo" style="background:'+(p.color_local||'#1565c0')+'">'+(p.sigla_local||p.equipo_local.substring(0,3).toUpperCase())+'</div><div class="team-name-big">'+p.equipo_local+'</div></div>'+
@@ -897,13 +896,17 @@ async function filterByCat(cat) {
 function resetCat() { document.getElementById('cat-title').textContent = 'Generos'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
 
 async function openPelicula(id) {
+  _dbg('Paso 1: click id=' + id + ' state=' + state.peliculas.length + ' items', '#1565C0');
   navigate('player-movie');
+  _dbg('Paso 2: navigate OK - panel activo?', '#388E3C');
   document.getElementById('pm-title').textContent = 'Cargando...';
   try {
   var sid = String(id);
   var p = state.peliculas.find(function(x){ return String(x.id)===sid; });
-  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
+  _dbg('Paso 3: find=' + (p ? 'ENCONTRADO' : 'no encontrado, buscando en DB...'), p ? '#388E3C' : '#F57C00');
+  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; _dbg('Paso 4: DB=' + (p?'OK':'FALLIDO'), p?'#388E3C':'#c62828'); }
   if (!p) { document.getElementById('pm-title').textContent = 'Error al cargar'; return; }
+  _dbg('Paso 5: datos OK - cargando...', '#388E3C');
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('pm-tags').innerHTML = (p.anio?'<span class="tag">'+p.anio+'</span>':'')+(p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+(p.plataforma?'<span class="tag">'+p.plataforma+'</span>':'');
@@ -1068,20 +1071,37 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
   makeFocusable();
 })();
 
-// === TEMPORAL DEBUG ===
+
+// ── Event delegation para cards (más robusto que onclick inline) ────────────
 document.addEventListener('click', function(e) {
-  var card = e.target.closest('[onclick]');
-  if (!card) return;
-  var fn = card.getAttribute('onclick') || '';
-  if (!fn.includes('openPelicula') && !fn.includes('openSerie') && !fn.includes('openCanal')) return;
-  var banner = document.getElementById('_debug_banner') || document.createElement('div');
-  banner.id = '_debug_banner';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:14px;background:#E53935;color:white;font-size:15px;z-index:99999;text-align:center;';
-  banner.textContent = 'CLICK OK: ' + fn.substring(0,60);
-  document.body.appendChild(banner);
-  setTimeout(function(){ var b=document.getElementById('_debug_banner'); if(b)b.remove(); }, 4000);
-}, true);
-// === FIN DEBUG ===
+  var el = e.target;
+  // Movie / content cards
+  var mc = el.closest('.movie-card, .content-card');
+  if (mc && mc.dataset.id) {
+    var t = mc.dataset.type || 'pelicula';
+    if (t === 'pelicula') openPelicula(mc.dataset.id);
+    else openSerie(mc.dataset.id, t);
+    return;
+  }
+  // Series / anime row cards
+  var sc = el.closest('.series-card');
+  if (sc && sc.dataset.id) {
+    openSerie(sc.dataset.id, sc.dataset.type || 'serie');
+    return;
+  }
+  // TV / live channel cards
+  var cc = el.closest('.ch-card, .tv-card');
+  if (cc && cc.dataset.id) {
+    openCanal(cc.dataset.id);
+    return;
+  }
+  // Partido / sport event cards
+  var pc = el.closest('.match-big, .match-card');
+  if (pc && pc.dataset.id) {
+    openPartidoModal(pc.dataset.id);
+    return;
+  }
+});
 
 </script>
 
