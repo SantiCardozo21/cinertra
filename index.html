@@ -897,12 +897,13 @@ async function filterByCat(cat) {
 function resetCat() { document.getElementById('cat-title').textContent = 'Generos'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
 
 async function openPelicula(id) {
+  navigate('player-movie');
+  document.getElementById('pm-title').textContent = 'Cargando...';
   try {
   var sid = String(id);
   var p = state.peliculas.find(function(x){ return String(x.id)===sid; });
   if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
-  if (!p) { console.error('openPelicula: no encontrado', id); return; }
-  navigate('player-movie');
+  if (!p) { document.getElementById('pm-title').textContent = 'Error al cargar'; return; }
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('pm-tags').innerHTML = (p.anio?'<span class="tag">'+p.anio+'</span>':'')+(p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+(p.plataforma?'<span class="tag">'+p.plataforma+'</span>':'');
@@ -917,13 +918,14 @@ async function openPelicula(id) {
 }
 
 async function openSerie(id, type) {
+  navigate('player-serie');
+  document.getElementById('ps-title').textContent = 'Cargando...';
   try {
   var sid = String(id);
   var arr = type==='anime' ? state.anime : state.series;
   var s = arr.find(function(x){ return String(x.id)===sid; });
   if (!s) { var tbl=type==='anime'?'anime':'series'; var r=await db.from(tbl).select('*').eq('id',id).single(); s=r.data; }
-  if (!s) { console.error('openSerie: no encontrado', id, type); return; }
-  navigate('player-serie');
+  if (!s) { document.getElementById('ps-title').textContent = 'Error al cargar'; return; }
   document.getElementById('ps-title').textContent = s.titulo;
   document.getElementById('ps-sinopsis').textContent = s.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('ps-tags').innerHTML = (s.anio?'<span class="tag">'+s.anio+'</span>':'')+(s.genero?s.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(s.plataforma?'<span class="tag">'+s.plataforma+'</span>':'');
