@@ -897,9 +897,11 @@ async function filterByCat(cat) {
 function resetCat() { document.getElementById('cat-title').textContent = 'Generos'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
 
 async function openPelicula(id) {
-  var p = state.peliculas.find(function(x){ return x.id===id; });
+  try {
+  var sid = String(id);
+  var p = state.peliculas.find(function(x){ return String(x.id)===sid; });
   if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
-  if (!p) return;
+  if (!p) { console.error('openPelicula: no encontrado', id); return; }
   navigate('player-movie');
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
@@ -911,13 +913,16 @@ async function openPelicula(id) {
   document.getElementById('pm-btn').onclick = playFn;
   thumb.onclick = playFn;
   document.getElementById('back-movie').onclick = function(){ navigate('peliculas'); };
+  } catch(err) { console.error('openPelicula error:', err); }
 }
 
 async function openSerie(id, type) {
+  try {
+  var sid = String(id);
   var arr = type==='anime' ? state.anime : state.series;
-  var s = arr.find(function(x){ return x.id===id; });
+  var s = arr.find(function(x){ return String(x.id)===sid; });
   if (!s) { var tbl=type==='anime'?'anime':'series'; var r=await db.from(tbl).select('*').eq('id',id).single(); s=r.data; }
-  if (!s) return;
+  if (!s) { console.error('openSerie: no encontrado', id, type); return; }
   navigate('player-serie');
   document.getElementById('ps-title').textContent = s.titulo;
   document.getElementById('ps-sinopsis').textContent = s.sinopsis || 'Sin sinopsis disponible.';
@@ -944,6 +949,7 @@ async function openSerie(id, type) {
   window._selTemp = function(t){ curTemp=t; curEp=0; buildDrops(); document.getElementById('drop-temp').classList.remove('open'); };
   window._selEp   = function(i){ curEp=i; buildDrops(); document.getElementById('drop-ep').classList.remove('open'); };
   buildDrops();
+  } catch(err) { console.error('openSerie error:', err); }
 }
 
 function openCanal(id) {
