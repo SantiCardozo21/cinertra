@@ -333,14 +333,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
 <div class="layout">
   <div class="sidebar">
-    <div class="nav-item active" id="nav-home" onclick="navigate('home')" tabindex="0" onkeydown="if(event.key==='Enter')navigate('home')"><i class="ti ti-home"></i> Inicio</div>
-    <div class="nav-item" id="nav-tv" onclick="navigate('tv')"><i class="ti ti-device-tv"></i> TV en vivo</div>
-    <div class="nav-item" id="nav-futbol" onclick="navigate('futbol')"><i class="ti ti-ball-football"></i> Deportes en vivo</div>
-    <div class="nav-item" id="nav-peliculas" onclick="navigate('peliculas')"><i class="ti ti-movie"></i> Peliculas</div>
-    <div class="nav-item" id="nav-series" onclick="navigate('series')"><i class="ti ti-device-tv-old"></i> Series</div>
-    <div class="nav-item" id="nav-anime" onclick="navigate('anime')"><i class="ti ti-eye"></i> Animes</div>
-    <div class="nav-item" id="nav-plataformas" onclick="navigate('plataformas')"><i class="ti ti-apps"></i> Plataformas</div>
-    <div class="nav-item" id="nav-categorias" onclick="navigate('categorias')"><i class="ti ti-tag"></i> Generos</div>
+    <div class="nav-item" data-action="nav" data-section="home"  active" id="nav-home" tabindex="0"><i class="ti ti-home"></i> Inicio</div>
+    <div class="nav-item" data-action="nav" data-section="tv" " id="nav-tv"><i class="ti ti-device-tv"></i> TV en vivo</div>
+    <div class="nav-item" data-action="nav" data-section="futbol" " id="nav-futbol"><i class="ti ti-ball-football"></i> Deportes en vivo</div>
+    <div class="nav-item" data-action="nav" data-section="peliculas" " id="nav-peliculas"><i class="ti ti-movie"></i> Peliculas</div>
+    <div class="nav-item" data-action="nav" data-section="series" " id="nav-series"><i class="ti ti-device-tv-old"></i> Series</div>
+    <div class="nav-item" data-action="nav" data-section="anime" " id="nav-anime"><i class="ti ti-eye"></i> Animes</div>
+    <div class="nav-item" data-action="nav" data-section="plataformas" " id="nav-plataformas"><i class="ti ti-apps"></i> Plataformas</div>
+    <div class="nav-item" data-action="nav" data-section="categorias" " id="nav-categorias"><i class="ti ti-tag"></i> Generos</div>
     </div>
 
   <div class="main">
@@ -1074,18 +1074,6 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
 
 
 
-// ── D-pad ENTER → click para Android TV ────────────────────────────────────
-document.addEventListener('keydown', function(e) {
-  var k = e.keyCode || e.which;
-  // ENTER(13), DPAD_CENTER(23), SPACE(32), NUMPAD_ENTER(108)
-  if (k===13 || k===23 || k===32 || k===108) {
-    var focused = document.activeElement;
-    if (focused && focused !== document.body && focused.tagName !== 'INPUT' && focused.tagName !== 'TEXTAREA') {
-      e.preventDefault();
-      focused.click();
-    }
-  }
-}, false);
 
 // ── Click handler SIN closest() — compatible con WebView antiguo ──────────
 document.addEventListener('click', function(e) {
@@ -1107,6 +1095,7 @@ document.addEventListener('click', function(e) {
       if (action === 'canal')                 { openCanal(id); return; }
       if (action === 'partido')               { openPartidoModal(id); return; }
     }
+    if (action === 'nav')   { navigate(el.getAttribute('data-section') || ''); return; }
     if (action === 'login')                   { checkCode(); return; }
     el = el.parentElement;
   }
