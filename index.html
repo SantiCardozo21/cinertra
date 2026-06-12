@@ -312,7 +312,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     </div>
     <div class="sub-error" id="sub-error"></div>
     <div class="sub-loading" id="sub-loading">Verificando...</div>
-    <button class="sub-btn" id="sub-btn" onclick="checkCode()">Ingresar</button>
+    <button class="sub-btn" id="sub-btn" data-action="login">Ingresar</button>
   </div>
 </div>
 
@@ -622,11 +622,11 @@ function showApp(code, dias) {
 (function() {
   var input = document.getElementById('sub-input');
   if (input) {
-    input.addEventListener('keydown', function(e) { e.stopPropagation(); });
-    input.addEventListener('blur', function() {
-      var screen = document.getElementById('sub-screen');
-      if (screen && !screen.classList.contains('hidden')) { setTimeout(function() { input.focus(); }, 50); }
-    });
+    input.addEventListener('keydown', function(e) {
+    e.stopPropagation();
+    if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); checkCode(); }
+  });
+    
   }
 })();
 
@@ -1085,6 +1085,8 @@ document.addEventListener('click', function(e) {
   if (cc && cc.dataset.id) { openCanal(cc.dataset.id); return; }
   var pc = el.closest('.match-big');
   if (pc && pc.dataset.id) { openPartidoModal(pc.dataset.id); return; }
+  var lb = el.closest('[data-action="login"]') || (el.id === 'sub-btn' ? el : null);
+  if (lb) { checkCode(); return; }
 }, true); // <<< capture:true — igual que el debug que disparó correctamente
 
 </script>
