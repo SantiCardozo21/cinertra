@@ -1067,6 +1067,22 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
   observer.observe(document.body, { childList:true, subtree:true });
   makeFocusable();
 })();
+
+// === TEMPORAL DEBUG ===
+document.addEventListener('click', function(e) {
+  var card = e.target.closest('[onclick]');
+  if (!card) return;
+  var fn = card.getAttribute('onclick') || '';
+  if (!fn.includes('openPelicula') && !fn.includes('openSerie') && !fn.includes('openCanal')) return;
+  var banner = document.getElementById('_debug_banner') || document.createElement('div');
+  banner.id = '_debug_banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:14px;background:#E53935;color:white;font-size:15px;z-index:99999;text-align:center;';
+  banner.textContent = 'CLICK OK: ' + fn.substring(0,60);
+  document.body.appendChild(banner);
+  setTimeout(function(){ var b=document.getElementById('_debug_banner'); if(b)b.remove(); }, 4000);
+}, true);
+// === FIN DEBUG ===
+
 </script>
 
 <div class="partido-modal-bg" id="partido-modal-bg" onclick="if(event.target===this)this.classList.remove('open')">
