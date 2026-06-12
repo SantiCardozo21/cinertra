@@ -748,7 +748,7 @@ function renderHome() {
   hc.innerHTML = state.canales.slice(0,6).map(function(c) {
     var fb=c.siglas||c.nombre.substring(0,3).toUpperCase(), bg=c.color||'#555';
     var logo = c.logo_url ? '<img class="ch-logo" src="'+c.logo_url+'" data-fb="'+fb+'" data-color="'+bg+'" onerror="imgFail(this)">' : '<div class="ch-dot" style="background:'+bg+'">'+fb+'</div>';
-    return '<div class="ch-card" data-id="'+c.id+'" data-action="canal" style="cursor:pointer">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
+    return '<div class="ch-card" data-id="'+c.id+'" data-action="canal" tabindex="0" style="cursor:pointer">'+logo+'<div class="ch-name">'+c.nombre+'</div><div class="live-tag"><span class="live-dot"></span>En vivo</div></div>';
   }).join('') || '<div class="empty">Sin canales</div>';
   document.getElementById('home-peliculas').innerHTML = state.peliculas.slice(0,6).map(movieCardHTML).join('') || '<div class="empty">Sin peliculas</div>';
   document.getElementById('home-series').innerHTML = state.series.slice(0,5).map(function(s){ return seriesRowHTML(s,'series'); }).join('') || '<div class="empty">Sin series</div>';
@@ -757,11 +757,11 @@ function renderHome() {
 
 function movieCardHTML(p) {
   var img = p.poster_url ? '<img src="'+p.poster_url+'" onerror="this.hidden=true">' : '<div class="poster-bg" style="background:'+rg()+';width:100%;height:100%;"></div>';
-  return '<div class="movie-card" data-id="'+p.id+'" data-action="pelicula" style="cursor:pointer"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+( p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
+  return '<div class="movie-card" data-id="'+p.id+'" data-action="pelicula" tabindex="0" style="cursor:pointer"><div class="poster">'+img+'</div><div class="movie-title">'+p.titulo+'</div><div class="movie-meta">'+(p.anio||'')+( p.genero?' · '+p.genero.split(',')[0]:'')+'</div></div>';
 }
 function seriesRowHTML(s, type) {
   var img = s.poster_url ? '<img src="'+s.poster_url+'" onerror="this.hidden=true">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
-  return '<div class="series-card" data-id="'+s.id+'" data-type="'+type+'" data-action="serie" style="cursor:pointer"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
+  return '<div class="series-card" data-id="'+s.id+'" data-type="'+type+'" data-action="serie" tabindex="0" style="cursor:pointer"><div class="series-thumb">'+img+'<div class="ep-badge">T'+(s.temporadas||1)+' Ep '+(s.ultimo_episodio||1)+'</div></div><div class="series-title">'+s.titulo+'</div><div class="series-ep">Nuevo episodio</div></div>';
 }
 
 function renderTV(filtro) {
@@ -777,7 +777,7 @@ function filterTV(cat, el) { document.querySelectorAll('#tv-tabs .tab').forEach(
 
 function contentCardHTML(item, type) {
   var img = item.poster_url ? '<img src="'+item.poster_url+'" onerror="this.hidden=true">' : '<div style="width:100%;height:100%;background:'+rg()+';"></div>';
-  return '<div class="content-card" data-id="'+item.id+'" data-type="'+type+'" data-action="content" style="cursor:pointer"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'' )+'</div></div>';
+  return '<div class="content-card" data-id="'+item.id+'" data-type="'+type+'" data-action="content" tabindex="0" style="cursor:pointer"><div class="cposter">'+img+'</div><div class="movie-title">'+item.titulo+'</div><div class="movie-meta">'+(item.anio||'')+(item.genero?' · '+item.genero.split(',')[0]:'' )+'</div></div>';
 }
 function renderGrid(type, data) {
   var el = document.getElementById(type+'-grid');
@@ -1073,24 +1073,44 @@ document.addEventListener('click', function(){ document.querySelectorAll('.dropd
 })();
 
 
-// ── Event delegation CAPTURE (mismo que el debug que funcionó) ──────────────
-document.addEventListener('click', function(e) {
-  var el = e.target;
-  var mc = el.closest('.movie-card, .content-card');
-  if (mc && mc.dataset.id) {
-    var t = mc.dataset.type || 'pelicula';
-    if (t === 'pelicula') { openPelicula(mc.dataset.id); return; }
-    else { openSerie(mc.dataset.id, t); return; }
+
+// ── D-pad ENTER → click para Android TV ────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  var k = e.keyCode || e.which;
+  // ENTER(13), DPAD_CENTER(23), SPACE(32), NUMPAD_ENTER(108)
+  if (k===13 || k===23 || k===32 || k===108) {
+    var focused = document.activeElement;
+    if (focused && focused !== document.body && focused.tagName !== 'INPUT' && focused.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      focused.click();
+    }
   }
-  var sc = el.closest('.series-card');
-  if (sc && sc.dataset.id) { openSerie(sc.dataset.id, sc.dataset.type || 'serie'); return; }
-  var cc = el.closest('.ch-card, .tv-card');
-  if (cc && cc.dataset.id) { openCanal(cc.dataset.id); return; }
-  var pc = el.closest('.match-big');
-  if (pc && pc.dataset.id) { openPartidoModal(pc.dataset.id); return; }
-  var lb = el.closest('[data-action="login"]') || (el.id === 'sub-btn' ? el : null);
-  if (lb) { checkCode(); return; }
-}, true); // <<< capture:true — igual que el debug que disparó correctamente
+}, false);
+
+// ── Click handler SIN closest() — compatible con WebView antiguo ──────────
+document.addEventListener('click', function(e) {
+  // Subir hasta 6 niveles buscando data-action
+  var el = e.target;
+  for (var i = 0; i < 6; i++) {
+    if (!el || el === document.body) break;
+    var action = el.getAttribute ? el.getAttribute('data-action') : null;
+    var id     = el.getAttribute ? el.getAttribute('data-id')     : null;
+    var type   = el.getAttribute ? el.getAttribute('data-type')   : null;
+    if (action && id) {
+      if (action === 'pelicula')              { openPelicula(id); return; }
+      if (action === 'serie')                 { openSerie(id, type || 'serie'); return; }
+      if (action === 'content') {
+        if (type === 'pelicula') openPelicula(id);
+        else openSerie(id, type || 'serie');
+        return;
+      }
+      if (action === 'canal')                 { openCanal(id); return; }
+      if (action === 'partido')               { openPartidoModal(id); return; }
+    }
+    if (action === 'login')                   { checkCode(); return; }
+    el = el.parentElement;
+  }
+}, true); // capture:true — igual que el debug que disparó correctamente
 
 </script>
 
