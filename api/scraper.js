@@ -348,52 +348,103 @@ async function populateJuanitaSerieEpisodes(batch) {
 }
 
 async function populatePoseidonSerieEpisodes(batch) {
-  // Series PoseidonHD con episodios vacíos
+  const buildId = await getPoseidonBuildId();
+  if (!buildId) return 0;
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/series?plataforma=eq.PoseidonHD&ultimo_episodio=eq.0&select=titulo,link&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const series = await res.json();
   if (!Array.isArray(series) || !series.length) return 0;
+
   let count = 0;
   for (const s of series) {
-    if (!s.link) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
-    const html = await fetchWithTimeout(s.link, 7000);
-    if (!html) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
-    // Extraer links de episodios del HTML: /serie/{id}/{slug}/{S}x{EP}
-    const linkBase = s.link.replace(/\/$/, '');
-    const epPattern = new RegExp(`href=["']?(${linkBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\/(\\d+)x(\\d+))["']?`, 'g');
+    if (!s.link) {
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+
+    // Extraer id y slug del link: /serie/{id}/{slug}
+    const parts = s.link.replace(/\/$/, '').split('/');
+    const id = parts[parts.length - 2];
+    const slug = parts[parts.length - 1];
+
+    if (!id || !slug) {
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+
+    // Usar _next/data para obtener datos completos de la serie
+    const nextUrl = `${POSEIDON_BASE}/_next/data/${buildId}/es/serie/${id}/${slug}.json`;
+    const raw = await fetchPage(nextUrl);
+    if (!raw) {
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+
+    let pageData;
+    try { pageData = JSON.parse(raw); } catch (_) {
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+
+    const tvshow = pageData?.pageProps?.thisTvshow;
+    if (!tvshow) {
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+
+    // Intentar extraer temporadas del objeto thisTvshow
+    const numSeasons = tvshow.numSeasons || tvshow.seasons?.length || tvshow.number_of_seasons || 1;
     const episodios = {};
     let maxTemp = 0, maxEp = 0;
-    let m;
-    while ((m = epPattern.exec(html)) !== null) {
-      const epUrl = m[1], temp = parseInt(m[2]), ep = parseInt(m[3]);
-      if (!episodios[temp]) episodios[temp] = [];
-      if (!episodios[temp].find(e => e.ep === ep)) {
-        episodios[temp].push({ ep, titulo: 'Episodio ' + ep, link: epUrl });
-        maxTemp = Math.max(maxTemp, temp);
-        maxEp   = Math.max(maxEp,   ep);
+
+    // Si hay información de episodios en el JSON
+    if (tvshow.seasons && Array.isArray(tvshow.seasons)) {
+      for (const season of tvshow.seasons) {
+        const t = season.season_number || season.number || season.seasonNumber;
+        const epCount = season.episode_count || season.episodesCount || season.episodeCount || 0;
+        if (!t || !epCount) continue;
+        episodios[t] = [];
+        for (let ep = 1; ep <= epCount; ep++) {
+          episodios[t].push({
+            ep,
+            titulo: `Episodio ${ep}`,
+            link: `${POSEIDON_BASE}/serie/${id}/${slug}/${t}x${String(ep).padStart(2,'0')}`
+          });
+          maxEp = Math.max(maxEp, ep);
+        }
+        maxTemp = Math.max(maxTemp, t);
       }
     }
-    // Fallback: buscar patrón genérico si no encontró links específicos
+
+    // Fallback: construir episodios desde el HTML si no hay info de temporadas en JSON
     if (!maxTemp) {
-      const genPattern = /href=["']([^"']*\/\d+x\d+)["']/g;
-      while ((m = genPattern.exec(html)) !== null) {
-        const parts = m[1].match(/(\d+)x(\d+)/);
-        if (!parts) continue;
-        const temp = parseInt(parts[1]), ep = parseInt(parts[2]);
-        const epUrl = m[1].startsWith('http') ? m[1] : `${POSEIDON_BASE}${m[1]}`;
-        if (!episodios[temp]) episodios[temp] = [];
-        if (!episodios[temp].find(e => e.ep === ep)) {
-          episodios[temp].push({ ep, titulo: 'Episodio ' + ep, link: epUrl });
-          maxTemp = Math.max(maxTemp, temp);
-          maxEp   = Math.max(maxEp,   ep);
+      const html = await fetchWithTimeout(s.link, 6000);
+      if (html) {
+        const epRegex = new RegExp(`/serie/${id}/${slug}/(\\d+)x(\\d+)`, 'g');
+        let m;
+        while ((m = epRegex.exec(html)) !== null) {
+          const t = parseInt(m[1]), ep = parseInt(m[2]);
+          if (!episodios[t]) episodios[t] = [];
+          if (!episodios[t].find(e => e.ep === ep)) {
+            episodios[t].push({ ep, titulo: `Episodio ${ep}`, link: `${POSEIDON_BASE}/serie/${id}/${slug}/${t}x${String(ep).padStart(2,'0')}` });
+            maxTemp = Math.max(maxTemp, t);
+            maxEp = Math.max(maxEp, ep);
+          }
         }
       }
     }
-    if (!maxTemp) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
-    // Ordenar episodios
+
+    // Si sigue sin episodios, al menos crear la T1E1 con el link disponible
+    if (!maxTemp) {
+      episodios[1] = [{ ep: 1, titulo: 'Episodio 1', link: `${POSEIDON_BASE}/serie/${id}/${slug}/1x01` }];
+      maxTemp = 1; maxEp = 1;
+    }
+
     Object.keys(episodios).forEach(t => { episodios[t].sort((a, b) => a.ep - b.ep); });
+
     await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, {
       episodios, temporadas: maxTemp, ultimo_episodio: maxEp
     });
