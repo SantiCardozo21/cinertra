@@ -276,7 +276,7 @@ function parseSeriesInfoPage(html) {
 
 async function enrichPeliculas(batch) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/peliculas?genero=eq.&plataforma=eq.PelisJuanita&select=titulo,link_reproduccion&limit=${batch}&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/peliculas?or=(genero.eq.,genero.is.null)&plataforma=eq.PelisJuanita&select=titulo,link_reproduccion,link&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const movies = await res.json();
@@ -297,7 +297,7 @@ async function enrichPeliculas(batch) {
 
 async function enrichSeries(batch) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/series?genero=eq.&plataforma=eq.PelisJuanita&select=titulo&limit=${batch}&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/series?or=(genero.eq.,genero.is.null)&plataforma=eq.PelisJuanita&select=titulo,link&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const series = await res.json();
@@ -316,7 +316,7 @@ async function enrichSeries(batch) {
 
 async function enrichAnime(batch) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/anime?sinopsis=eq.&slug=neq.&select=titulo,slug&limit=${batch}&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/anime?or=(sinopsis.eq.,sinopsis.is.null)&slug=neq.&select=titulo,slug&limit=${batch}&order=created_at.asc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
   const animes = await res.json();
