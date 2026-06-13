@@ -663,11 +663,32 @@ function showApp(code, dias) {
 })();
 
 function navigate(section) {
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-  var panel = document.getElementById('panel-'+section);
-  var nav = document.getElementById('nav-'+section);
-  if (panel) panel.classList.add('active');
+  // Hide all top-level panels
+  document.querySelectorAll('.panel').forEach(function(p) {
+    p.classList.remove('active');
+    if (!p.classList.contains('player-panel')) p.style.display = '';
+  });
+  // Hide all player panels
+  document.querySelectorAll('.player-panel').forEach(function(p) {
+    p.style.display = 'none';
+    p.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+
+  var panel = document.getElementById('panel-' + section);
+  if (panel) {
+    panel.classList.add('active');
+    if (panel.classList.contains('player-panel')) {
+      // Move to body so parent display:none can't hide it
+      if (panel.parentElement !== document.body) {
+        document.body.appendChild(panel);
+      }
+      panel.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg,#0a0a0a);z-index:9999;padding:20px;overflow-y:auto;flex-direction:column;gap:16px;box-sizing:border-box;';
+    } else {
+      panel.style.display = 'flex';
+    }
+  }
+  var nav = document.getElementById('nav-' + section);
   if (nav) nav.classList.add('active');
   state.currentSection = section;
   var main = document.querySelector('.main');
