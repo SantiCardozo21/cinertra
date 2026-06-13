@@ -47,6 +47,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .main::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
 .panel{display:none;padding:20px;flex-direction:column;gap:20px;}
 .panel.active{display:flex;}
+.player-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;padding:20px;overflow-y:auto;flex-direction:column;gap:20px;}
+.player-panel.active{display:flex;}
 .panel-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;}
 .panel-title i{color:var(--accent);}
 .section{display:flex;flex-direction:column;gap:10px;}
@@ -490,7 +492,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
         
 
 
-    <div class="panel" id="panel-player-movie">
+    
+
+    
+
+    
+
+  
+
+<div class="panel player-panel" id="panel-player-movie">
       <div class="back-btn" id="back-movie" onclick="navigate('peliculas')"><i class="ti ti-arrow-left"></i> Volver</div>
       <div class="player-layout">
         <div class="player-info">
@@ -507,7 +517,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       </div>
     </div>
 
-    <div class="panel" id="panel-player-serie">
+<div class="panel player-panel" id="panel-player-serie">
       <div class="back-btn" id="back-serie" onclick="navigate('series')"><i class="ti ti-arrow-left"></i> Volver</div>
       <div class="player-layout">
         <div class="player-info">
@@ -537,7 +547,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       </div>
     </div>
 
-    <div class="panel" id="panel-player-canal">
+<div class="panel player-panel" id="panel-player-canal">
       <div class="back-btn" onclick="navigate('tv')" style="margin-bottom:8px;"><i class="ti ti-arrow-left"></i> Volver a TV en vivo</div>
       <div class="canal-player-wrap">
         <div class="canal-header">
@@ -557,9 +567,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
         <div class="canal-now"><div class="canal-now-label">Canal seleccionado</div><div class="canal-now-prog" id="pc-prog">—</div></div>
       </div>
     </div>
-
-  </div>
 </div>
+</div>
+
+
+
+
+
+
 <script>
 var SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
