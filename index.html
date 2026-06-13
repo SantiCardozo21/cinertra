@@ -42,7 +42,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .nav-item i{font-size:18px;}
 .nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500;}
 .nav-item:hover:not(.active){background:rgba(255,255,255,0.03);color:var(--text2);}
-.main{flex:1;overflow-y:auto;background:var(--bg2);}
+.main{flex:1;overflow-y:auto;background:var(--bg2);position:relative;}
 .main::-webkit-scrollbar{width:4px;}
 .main::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
 .panel{display:none;padding:20px;flex-direction:column;gap:20px;}
@@ -680,10 +680,11 @@ function navigate(section) {
     panel.classList.add('active');
     if (panel.classList.contains('player-panel')) {
       // Move to body so parent display:none can't hide it
-      if (panel.parentElement !== document.body) {
-        document.body.appendChild(panel);
+      var mainEl = document.querySelector('.main');
+      if (mainEl && panel.parentElement !== mainEl) {
+        mainEl.appendChild(panel);
       }
-      panel.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg,#0a0a0a);z-index:9999;padding:20px;overflow-y:auto;flex-direction:column;gap:16px;box-sizing:border-box;';
+      panel.style.cssText = 'display:flex;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg2,#111);z-index:500;padding:24px;overflow-y:auto;flex-direction:column;gap:16px;box-sizing:border-box;min-height:100%;';
     } else {
       panel.style.display = 'flex';
     }
