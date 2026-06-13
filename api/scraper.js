@@ -266,31 +266,34 @@ function parseMoviePage(html) {
 
 function parseSeriesInfoPage(html) {
   if (!html) return null;
-  // Sinopsis: varios patrones posibles
-  const sinopsisMatch = html.match(/<p[^>]*class=['"][^'"]*sinopsis[^'"]*['"][^>]*>([\s\S]*?)<\/p>/) ||
-                        html.match(/<div[^>]*class=['"][^'"]*sinopsis[^'"]*['"][^>]*>([\s\S]*?)<\/div>/) ||
-                        html.match(/class=['"]description['"][^>]*>([\s\S]*?)<\//) ||
-                        html.match(/<meta name=['"]description['"] content=['"]([^'"]+)['"]/) ||
-                        html.match(/<p class=['"]overview['"]>([\s\S]*?)<\/p>/);
-  const sinopsis = sinopsisMatch?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
-  // Genero: varios patrones
+  // Sinopsis
+  const sinopsisMatch = html.match(/<p[^>]*class="sinopsis"[^>]*>([\s\S]*?)<\/p>/) ||
+                        html.match(/<div[^>]*class="sinopsis"[^>]*>([\s\S]*?)<\/div>/) ||
+                        html.match(/<meta name="description" content="([^"]+)"/) ;
+  const sinopsis = (sinopsisMatch?.[1] || '').replace(/<[^>]+>/g, '').trim();
+  // Generos
   const generos = [];
-  const genPatterns = [
-    /<p id=['"]sGenero['"]>([\s\S]*?)<\/p>/,
-    /class=['"]genre['"][^>]*>([^<]+)<\/a>/g,
-    /class=['"]badge[^'"]*['"][^>]*>([^<]+)<\//g,
-    /G[ée]nero[^:]*:\s*<[^>]+>([^<]+)/
-  ];
-  for (const pat of genPatterns) {
-    if (pat.global) {
-      let m; while ((m = pat.exec(html)) !== null) { const g = m[1].trim(); if (g && g.length > 1 && !generos.includes(g)) generos.push(g); }
-    } else {
-      const m = html.match(pat);
-      if (m) { const inner = m[1]; const tags = [...inner.matchAll(/>([^<
-
-]{2,})</g)]; tags.forEach(t => { const g = t[1].trim(); if (g) generos.push(g); }); }
+  const sGeneroMatch = html.match(/<p id="sGenero">([\s\S]*?)<\/p>/);
+  if (sGeneroMatch) {
+    const tagMatches = sGeneroMatch[1].matchAll(/class="badge[^"]*"[^>]*>([\s\S]*?)<\/[a-z]/g);
+    for (const m of tagMatches) {
+      const g = m[1].replace(/<[^>]+>/g, '').trim();
+      if (g && g.length > 1) generos.push(g);
     }
-    if (generos.length > 0) break;
+  }
+  if (!generos.length) {
+    const genreLinks = html.matchAll(/class="genre"[^>]*>([^<]+)<\/a>/g);
+    for (const m of genreLinks) {
+      const g = m[1].trim();
+      if (g) generos.push(g);
+    }
+  }
+  if (!generos.length) {
+    const badgeLinks = html.matchAll(/class="badge[^"]*"[^>]*>([^<]+)<\//g);
+    for (const m of badgeLinks) {
+      const g = m[1].trim();
+      if (g && g.length > 1 && g.length < 30) generos.push(g);
+    }
   }
   return { sinopsis, genero: generos.join(', ') };
 }
