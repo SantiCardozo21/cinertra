@@ -914,11 +914,19 @@ async function openPelicula(id) {
   var thumb = document.getElementById('pm-thumb');
   if (p.poster_url) { thumb.innerHTML = '<img src="'+p.poster_url+'" style="width:100%;height:100%;object-fit:cover;"><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
   else { thumb.innerHTML = '<div style="width:100%;height:100%;background:'+rg()+';"></div><div class="video-overlay"><div class="play-btn"><i class="ti ti-player-play-filled"></i></div></div>'; }
-  var playFn = function() { if (window.Android) Android.playVideo(p.link_reproduccion, p.titulo); else window.open(p.link_reproduccion, '_blank'); };
+  var playUrl = p.link_reproduccion || p.link || '';
+  var playFn = function() {
+    if (!playUrl) { alert('Sin link de reproducción'); return; }
+    if (window.Android) Android.playVideo(playUrl, p.titulo);
+    else window.open(playUrl, '_blank');
+  };
   document.getElementById('pm-btn').onclick = playFn;
   thumb.onclick = playFn;
   document.getElementById('back-movie').onclick = function(){ navigate('peliculas'); };
-  } catch(err) { console.error('openPelicula error:', err); }
+  } catch(err) { 
+    console.error('openPelicula error:', err);
+    document.getElementById('pm-title').textContent = 'Error: ' + (err.message || err);
+  }
 }
 
 async function openSerie(id, type) {
