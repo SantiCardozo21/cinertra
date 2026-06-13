@@ -133,21 +133,24 @@ function poseidonMovieToDb(m) {
   };
 }
 
-function poseidonSerieToDb(s) {
-  const slugParts = s.url?.slug?.split('/') || [];
-  const id = slugParts[1] || s.TMDbId || '';
+function poseidonSerieToDb(s, slugSrc) {
+  // s = datos ricos (thisTvshow o serie); slugSrc = fuente de URL (serie del listado)
+  const src = slugSrc || s;
+  const slugParts = src.url?.slug?.split('/') || [];
+  const id = slugParts[1] || src.TMDbId || s.TMDbId || '';
   const slugName = slugParts[2] || '';
-  const year = s.releaseDate ? s.releaseDate.substring(0, 4) : '';
+  const year = (s.releaseDate || src.releaseDate || '').substring(0, 4);
   return {
-    titulo: s.titles?.name || '',
+    titulo: s.titles?.name || src.titles?.name || '',
     anio: year,
-    genero: s.genres?.map(g => g.name).join(', ') || '',
-    sinopsis: s.overview || '',
-    poster_url: s.images?.poster || '',
+    genero: s.genres?.map(g => g.name).join(', ') || src.genres?.map(g => g.name).join(', ') || '',
+    sinopsis: s.overview || src.overview || '',
+    poster_url: s.images?.poster || src.images?.poster || '',
     plataforma: 'PoseidonHD',
     episodios: {},
     temporadas: 1,
-    ultimo_episodio: 0
+    ultimo_episodio: 0,
+    link: id ? `${POSEIDON_BASE}/serie/${id}/${slugName}` : ''
   };
 }
 
@@ -172,10 +175,11 @@ async function checkPoseidonSerieHD(serie) {
   const html = await fetchWithTimeout(`${POSEIDON_BASE}/serie/${id}/${slugName}`, 5000);
   const nextData = extractNextData(html);
   if (!nextData) return null;
-  const videos = nextData?.props?.pageProps?.thisTvshow?.videos
-              || nextData?.props?.pageProps?.thisMovie?.videos;
+  const thisTvshow = nextData?.props?.pageProps?.thisTvshow;
+  const videos = thisTvshow?.videos || nextData?.props?.pageProps?.thisMovie?.videos;
   if (!videos || !isHD(videos)) return null;
-  return poseidonSerieToDb(serie);
+  // Usar thisTvshow (página individual) para datos ricos; serie para URL/slug
+  return poseidonSerieToDb(thisTvshow || serie, serie);
 }
 
 async function scrapePoseidonMovies(page) {
@@ -262,14 +266,31 @@ function parseMoviePage(html) {
 
 function parseSeriesInfoPage(html) {
   if (!html) return null;
-  const sinopsisMatch = html.match(/<p class="sinopsis">([^<]+)<\/p>/) ||
-                        html.match(/<div[^>]*class="sinopsis"[^>]*>([^<]+)<\/div>/);
-  const sinopsis = sinopsisMatch?.[1]?.trim() || '';
-  const sGeneroMatch = html.match(/<p id=['"]sGenero['"]>([\s\S]*?)<\/p>/);
+  // Sinopsis: varios patrones posibles
+  const sinopsisMatch = html.match(/<p[^>]*class=['"][^'"]*sinopsis[^'"]*['"][^>]*>([\s\S]*?)<\/p>/) ||
+                        html.match(/<div[^>]*class=['"][^'"]*sinopsis[^'"]*['"][^>]*>([\s\S]*?)<\/div>/) ||
+                        html.match(/class=['"]description['"][^>]*>([\s\S]*?)<\//) ||
+                        html.match(/<meta name=['"]description['"] content=['"]([^'"]+)['"]/) ||
+                        html.match(/<p class=['"]overview['"]>([\s\S]*?)<\/p>/);
+  const sinopsis = sinopsisMatch?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
+  // Genero: varios patrones
   const generos = [];
-  if (sGeneroMatch) {
-    const tagMatches = [...sGeneroMatch[1].matchAll(/class="badge-etiqueta"[^>]*>[\s\S]*?<\/i>\s*([^<\n\r]+)/g)];
-    tagMatches.forEach(m => { const g = m[1].trim(); if (g) generos.push(g); });
+  const genPatterns = [
+    /<p id=['"]sGenero['"]>([\s\S]*?)<\/p>/,
+    /class=['"]genre['"][^>]*>([^<]+)<\/a>/g,
+    /class=['"]badge[^'"]*['"][^>]*>([^<]+)<\//g,
+    /G[ée]nero[^:]*:\s*<[^>]+>([^<]+)/
+  ];
+  for (const pat of genPatterns) {
+    if (pat.global) {
+      let m; while ((m = pat.exec(html)) !== null) { const g = m[1].trim(); if (g && g.length > 1 && !generos.includes(g)) generos.push(g); }
+    } else {
+      const m = html.match(pat);
+      if (m) { const inner = m[1]; const tags = [...inner.matchAll(/>([^<
+
+]{2,})</g)]; tags.forEach(t => { const g = t[1].trim(); if (g) generos.push(g); }); }
+    }
+    if (generos.length > 0) break;
   }
   return { sinopsis, genero: generos.join(', ') };
 }
@@ -309,6 +330,31 @@ async function enrichSeries(batch) {
     const info = parseSeriesInfoPage(html);
     if (!info) continue;
     await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: info.genero || '-', sinopsis: info.sinopsis });
+    enriched++;
+  }
+  return enriched;
+}
+
+async function enrichPoseidonSeries(batch) {
+  // Busca series PoseidonHD sin sinopsis o genero
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/series?or=(genero.eq.,genero.is.null)&plataforma=eq.PoseidonHD&select=titulo,link&limit=${batch}&order=created_at.asc`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+  );
+  const series = await res.json();
+  if (!Array.isArray(series) || !series.length) return 0;
+  let enriched = 0;
+  for (const serie of series) {
+    if (!serie.link) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: '-' }); continue; }
+    const html = await fetchWithTimeout(serie.link, 6000);
+    const nextData = extractNextData(html);
+    if (!nextData) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: '-' }); continue; }
+    const tvshow = nextData?.props?.pageProps?.thisTvshow;
+    if (!tvshow) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero: '-' }); continue; }
+    const genero = tvshow.genres?.map(g => g.name).join(', ') || '-';
+    const sinopsis = tvshow.overview || '';
+    const poster_url = tvshow.images?.poster || '';
+    await dbUpdate('series', `titulo=eq.${encodeURIComponent(serie.titulo)}`, { genero, sinopsis, poster_url });
     enriched++;
   }
   return enriched;
@@ -625,7 +671,12 @@ export default async function handler(req) {
     if (source === 'enrich-series') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichSeries(batch);
-      logs.push(`Enrich series: ${count} enriquecidas`);
+      logs.push(`Enrich series Juanita: ${count} enriquecidas`);
+    }
+    if (source === 'enrich-series-poseidon') {
+      const batch = parseInt(url.searchParams.get('batch') || '5');
+      const count = await enrichPoseidonSeries(batch);
+      logs.push(`Enrich series PoseidonHD: ${count} enriquecidas`);
     }
     if (source === 'enrich-anime') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
