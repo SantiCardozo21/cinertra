@@ -319,6 +319,89 @@ async function enrichPeliculas(batch) {
   return enriched;
 }
 
+async function populateJuanitaSerieEpisodes(batch) {
+  // Series PelisJuanita con solo 1 episodio placeholder (ultimo_episodio=1) o sin episodios (=0)
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/series?plataforma=eq.PelisJuanita&or=(ultimo_episodio.eq.0,ultimo_episodio.eq.1)&select=titulo&limit=${batch}&order=created_at.asc`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+  );
+  const series = await res.json();
+  if (!Array.isArray(series) || !series.length) return 0;
+  let count = 0;
+  for (const s of series) {
+    const info = await scrapeJuanitaSerieInfo(s.titulo);
+    if (!info || !Object.keys(info.episodios).length) {
+      // Marcar como procesada para no re-intentar
+      await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 });
+      continue;
+    }
+    await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, {
+      episodios:       info.episodios,
+      temporadas:      info.temporadas,
+      ultimo_episodio: info.ultimo_episodio,
+      poster_url:      info.poster_url || undefined,
+      anio:            info.anio || undefined
+    });
+    count++;
+  }
+  return count;
+}
+
+async function populatePoseidonSerieEpisodes(batch) {
+  // Series PoseidonHD con episodios vacíos
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/series?plataforma=eq.PoseidonHD&ultimo_episodio=eq.0&select=titulo,link&limit=${batch}&order=created_at.asc`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+  );
+  const series = await res.json();
+  if (!Array.isArray(series) || !series.length) return 0;
+  let count = 0;
+  for (const s of series) {
+    if (!s.link) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
+    const html = await fetchWithTimeout(s.link, 7000);
+    if (!html) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
+    // Extraer links de episodios del HTML: /serie/{id}/{slug}/{S}x{EP}
+    const linkBase = s.link.replace(/\/$/, '');
+    const epPattern = new RegExp(`href=["']?(${linkBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\/(\\d+)x(\\d+))["']?`, 'g');
+    const episodios = {};
+    let maxTemp = 0, maxEp = 0;
+    let m;
+    while ((m = epPattern.exec(html)) !== null) {
+      const epUrl = m[1], temp = parseInt(m[2]), ep = parseInt(m[3]);
+      if (!episodios[temp]) episodios[temp] = [];
+      if (!episodios[temp].find(e => e.ep === ep)) {
+        episodios[temp].push({ ep, titulo: 'Episodio ' + ep, link: epUrl });
+        maxTemp = Math.max(maxTemp, temp);
+        maxEp   = Math.max(maxEp,   ep);
+      }
+    }
+    // Fallback: buscar patrón genérico si no encontró links específicos
+    if (!maxTemp) {
+      const genPattern = /href=["']([^"']*\/\d+x\d+)["']/g;
+      while ((m = genPattern.exec(html)) !== null) {
+        const parts = m[1].match(/(\d+)x(\d+)/);
+        if (!parts) continue;
+        const temp = parseInt(parts[1]), ep = parseInt(parts[2]);
+        const epUrl = m[1].startsWith('http') ? m[1] : `${POSEIDON_BASE}${m[1]}`;
+        if (!episodios[temp]) episodios[temp] = [];
+        if (!episodios[temp].find(e => e.ep === ep)) {
+          episodios[temp].push({ ep, titulo: 'Episodio ' + ep, link: epUrl });
+          maxTemp = Math.max(maxTemp, temp);
+          maxEp   = Math.max(maxEp,   ep);
+        }
+      }
+    }
+    if (!maxTemp) { await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, { ultimo_episodio: -1 }); continue; }
+    // Ordenar episodios
+    Object.keys(episodios).forEach(t => { episodios[t].sort((a, b) => a.ep - b.ep); });
+    await dbUpdate('series', `titulo=eq.${encodeURIComponent(s.titulo)}`, {
+      episodios, temporadas: maxTemp, ultimo_episodio: maxEp
+    });
+    count++;
+  }
+  return count;
+}
+
 async function enrichSeries(batch) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/series?or=(genero.eq.,genero.is.null)&plataforma=eq.PelisJuanita&select=titulo,link&limit=${batch}&order=created_at.asc`,
@@ -675,6 +758,16 @@ export default async function handler(req) {
       const batch = parseInt(url.searchParams.get('batch') || '5');
       const count = await enrichSeries(batch);
       logs.push(`Enrich series Juanita: ${count} enriquecidas`);
+    }
+    if (source === 'populate-episodes-juanita') {
+      const batch = parseInt(url.searchParams.get('batch') || '5');
+      const count = await populateJuanitaSerieEpisodes(batch);
+      logs.push(`Episodios Juanita: ${count} series actualizadas`);
+    }
+    if (source === 'populate-episodes-poseidon') {
+      const batch = parseInt(url.searchParams.get('batch') || '3');
+      const count = await populatePoseidonSerieEpisodes(batch);
+      logs.push(`Episodios PoseidonHD: ${count} series actualizadas`);
     }
     if (source === 'enrich-series-poseidon') {
       const batch = parseInt(url.searchParams.get('batch') || '5');
