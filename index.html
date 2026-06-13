@@ -564,6 +564,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 var SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
 var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ── DEBUG OVERLAY (temporal) ─────────────────────────────────────────────────
+function dbg(msg) {
+  var d = document.getElementById('_dbg');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = '_dbg';
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c00;color:#fff;padding:12px;z-index:99999;font-size:20px;font-family:monospace;';
+    document.body.appendChild(d);
+  }
+  d.innerHTML = msg;
+  console.log('[DBG] ' + msg);
+}
+
 var state = { peliculas:[], series:[], anime:[], canales:[], partidos:[], currentSection:'home' };
 var PAGE_SIZE = 100;
 var _pg = {
@@ -901,13 +914,15 @@ async function filterByCat(cat) {
 function resetCat() { document.getElementById('cat-title').textContent = 'Generos'; document.getElementById('cat-back').style.display = 'none'; document.getElementById('cat-content').innerHTML = ''; var grid = document.getElementById('cat-grid'); if (grid) grid.style.display = 'grid'; }
 
 async function openPelicula(id) {
+  dbg('openPelicula id=' + id);
   navigate('player-movie');
   document.getElementById('pm-title').textContent = 'Cargando...';
   try {
   var sid = String(id);
   var p = state.peliculas.find(function(x){ return String(x.id)===sid; });
-  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
-  if (!p) { document.getElementById('pm-title').textContent = 'Error al cargar'; return; }
+  dbg('cache: ' + (p ? 'found '+p.titulo : 'not in cache, querying DB'));
+  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; dbg('DB result: ' + (p ? p.titulo : 'null, err='+JSON.stringify(r.error))); }
+  if (!p) { document.getElementById('pm-title').textContent = 'Error al cargar'; dbg('ERROR: p is null'); return; }
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
   document.getElementById('pm-tags').innerHTML = (p.anio?'<span class="tag">'+p.anio+'</span>':'')+(p.genero?p.genero.split(',').map(function(g){ return '<span class="tag">'+g.trim()+'</span>'; }).join(''):'')+(p.duracion?'<span class="tag">'+p.duracion+'</span>':'')+(p.plataforma?'<span class="tag">'+p.plataforma+'</span>':'');
@@ -923,8 +938,8 @@ async function openPelicula(id) {
   document.getElementById('pm-btn').onclick = playFn;
   thumb.onclick = playFn;
   document.getElementById('back-movie').onclick = function(){ navigate('peliculas'); };
-  } catch(err) { 
-    console.error('openPelicula error:', err);
+  } catch(err) {
+    dbg('CATCH ERROR: ' + (err.message || String(err)));
     document.getElementById('pm-title').textContent = 'Error: ' + (err.message || err);
   }
 }
