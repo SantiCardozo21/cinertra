@@ -576,9 +576,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
 
 <script>
+// ── Supabase (solo para auth/codigos) ────────────────────────────────────────
 var SUPABASE_URL = 'https://hrbzennsghftwjxtqeeg.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyYnplbm5zZ2hmdHdqeHRxZWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4OTY3MTYsImV4cCI6MjA5NDQ3MjcxNn0.Yn5iBBEPOvoZ7G5qSFHf7nyDwFa7RAYg93mbRUABGAM';
 var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Railway backend (datos: películas, series, anime, canales) ─────────────────
+var BACKEND    = 'https://web-production-b7f0d.up.railway.app';
+var API_SECRET = 'cinetra-2024-secret';
+
+async function fbGet(col, params) {
+  var url = BACKEND + '/api/data/' + col + '?limit=150';
+  if (params) Object.keys(params).forEach(function(k){ url += '&' + k + '=' + encodeURIComponent(params[k]); });
+  var res = await fetch(url);
+  var data = await res.json();
+  return data.data || [];
+}
 
 var state = { peliculas:[], series:[], anime:[], canales:[], partidos:[], currentSection:'home' };
 var PAGE_SIZE = 100;
@@ -767,13 +780,17 @@ function setupInfiniteScroll() {
 
 async function fetchFromDB() {
   var res = await Promise.all([
-    db.from('peliculas').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
-    db.from('series').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
-    db.from('anime').select('*').order('created_at',{ascending:false}).range(0,PAGE_SIZE-1),
-    db.from('canales').select('*').order('nombre')
+    fbGet('peliculas'),
+    fbGet('series'),
+    fbGet('anime'),
+    fbGet('canales'),
   ]);
-  var d = { peliculas: res[0].data||[], series: res[1].data||[], anime: res[2].data||[], canales: res[3].data||[] };
-  saveCache(d); applyData(d); loadFutbol();
+  state.peliculas = res[0];
+  state.series    = res[1];
+  state.anime     = res[2];
+  state.canales   = res[3];
+  saveCache(state);
+  applyData(state);
 }
 
 async function loadAll() {
@@ -841,7 +858,13 @@ async function filterGenre(type, genre, el) {
   renderGrid(type, res.data || []);
 }
 
-async function loadFutbol() { var res = await db.from('partidos').select('*').order('fecha'); state.partidos = res.data || []; renderFutbol('todos'); }
+async function loadFutbol() {
+  try {
+    var rows = await fbGet('partidos');
+    state.partidos = rows || [];
+    renderFutbol('todos');
+  } catch(e) { console.error('loadFutbol:', e); }
+}
 function matchBigHTML(p) {
   var ahora = new Date(), diff = new Date(p.fecha) - ahora;
   var isLive = p.en_vivo || (diff <= 0 && diff > -120*60000);
@@ -892,11 +915,11 @@ async function updatePlatCounts() {
     var p=plats[i][0], elId=plats[i][1], el=document.getElementById('count-'+elId);
     if (!el) continue;
     var r = await Promise.all([
-      db.from('peliculas').select('id',{count:'exact',head:true}).eq('plataforma',p),
-      db.from('series').select('id',{count:'exact',head:true}).eq('plataforma',p),
-      db.from('anime').select('id',{count:'exact',head:true}).eq('plataforma',p)
+      fbGet('peliculas', {plataforma: p, limit: 1}),
+      fbGet('series',    {plataforma: p, limit: 1}),
+      fbGet('anime',     {plataforma: p, limit: 1})
     ]);
-    el.textContent = ((r[0].count||0)+(r[1].count||0)+(r[2].count||0)) + ' titulos';
+    el.textContent = ((r[0].length||0)+(r[1].length||0)+(r[2].length||0)) + ' titulos';
   }
 }
 
@@ -907,9 +930,9 @@ async function filterByPlat(plat) {
   document.getElementById('plat-back').style.display = 'flex';
   container.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
   var res = await Promise.all([
-    db.from('peliculas').select('*').eq('plataforma',plat).limit(500),
-    db.from('series').select('*').eq('plataforma',plat).limit(500),
-    db.from('anime').select('*').eq('plataforma',plat).limit(500)
+    fbGet('peliculas', {plataforma: plat, limit: 500}),
+    fbGet('series',    {plataforma: plat, limit: 500}),
+    fbGet('anime',     {plataforma: plat, limit: 500})
   ]);
   var all = (res[0].data||[]).map(function(i){return Object.assign({},i,{_t:'pelicula'});})
     .concat((res[1].data||[]).map(function(i){return Object.assign({},i,{_t:'serie'});}))
@@ -927,9 +950,9 @@ async function filterByCat(cat) {
   if (grid) grid.style.display = 'none';
   container.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
   var res = await Promise.all([
-    db.from('peliculas').select('*').ilike('genero','%'+cat+'%').limit(200),
-    db.from('series').select('*').ilike('genero','%'+cat+'%').limit(200),
-    db.from('anime').select('*').ilike('genero','%'+cat+'%').limit(200)
+    fbGet('peliculas', {search_genero: cat, limit: 200}),
+    fbGet('series',    {search_genero: cat, limit: 200}),
+    fbGet('anime',     {search_genero: cat, limit: 200})
   ]);
   var all = (res[0].data||[]).map(function(i){return Object.assign({},i,{_t:'pelicula'});})
     .concat((res[1].data||[]).map(function(i){return Object.assign({},i,{_t:'serie'});}))
@@ -944,7 +967,7 @@ async function openPelicula(id) {
   try {
   var sid = String(id);
   var p = state.peliculas.find(function(x){ return String(x.id)===sid; });
-  if (!p) { var r=await db.from('peliculas').select('*').eq('id',id).single(); p=r.data; }
+  if (!p) { var rows=await fbGet('peliculas', {search: String(id), limit: 1}); p=rows[0] || null; }
   if (!p) { document.getElementById('pm-title').textContent = 'Error al cargar'; return; }
   document.getElementById('pm-title').textContent = p.titulo;
   document.getElementById('pm-sinopsis').textContent = p.sinopsis || 'Sin sinopsis disponible.';
