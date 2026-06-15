@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cinetra Migration</title>
+<style>
+  body { font-family: monospace; background: #0a0a0a; color: #fff; padding: 40px; }
+  button { background: #E53935; color: #fff; border: none; padding: 14px 28px; font-size: 16px; cursor: pointer; border-radius: 8px; }
+  button:disabled { background: #555; cursor: not-allowed; }
+  #log { margin-top: 24px; background: #1a1a1a; padding: 20px; border-radius: 8px; white-space: pre-wrap; min-height: 100px; font-size: 13px; line-height: 1.6; }
+  .ok  { color: #4CAF50; }
+  .err { color: #E53935; }
+</style>
+</head>
+<body>
+<h2>🎬 Cinetra — Migración Supabase → Firebase</h2>
+<p>Esto copia todas tus películas, series y anime a Firestore.</p>
+<button id="btn" onclick="migrate()">▶ Iniciar Migración</button>
+<div id="log">Esperando...</div>
+
+<script>
+const BACKEND = 'https://web-production-b7f0d.up.railway.app';
+const API_KEY = 'cinetra-2024-secret';
+
+async function migrate() {
+  const btn = document.getElementById('btn');
+  const log = document.getElementById('log');
+  btn.disabled = true;
+  btn.textContent = '⏳ Migrando...';
+  log.innerHTML = '<span>Iniciando migración...</span>\n';
+
+  try {
+    const res = await fetch(`${BACKEND}/api/migrate`, {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      log.innerHTML += `<span class="ok">✓ Migración completada!\n\n`;
+      log.innerHTML += `  Películas: ${data.migrated.peliculas}\n`;
+      log.innerHTML += `  Series:    ${data.migrated.series}\n`;
+      log.innerHTML += `  Anime:     ${data.migrated.anime}\n`;
+      log.innerHTML += `  Canales:   ${data.migrated.canales}\n</span>`;
+      btn.textContent = '✓ Completado';
+    } else {
+      log.innerHTML += `<span class="err">✗ Error: ${data.error}</span>`;
+      btn.disabled = false;
+      btn.textContent = '▶ Reintentar';
+    }
+  } catch (e) {
+    log.innerHTML += `<span class="err">✗ Error de conexión: ${e.message}</span>`;
+    btn.disabled = false;
+    btn.textContent = '▶ Reintentar';
+  }
+}
+</script>
+</body>
+</html>
