@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cinetra — Panel de Scraping</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:monospace;background:#080808;color:#eee;padding:24px;max-width:820px;margin:0 auto}
+  h1{color:#E53935;margin:0 0 4px;font-size:20px}
+  .sub{color:#444;font-size:11px;margin:0 0 18px}
+  h3{color:#90caf9;margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1.5px}
+  .card{background:#111;border:1px solid #222;border-radius:8px;padding:16px;margin-bottom:12px}
+  .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  label{color:#666;font-size:11px}
+  input[type=number]{width:60px;background:#1a1a1a;color:#fff;border:1px solid #2a2a2a;padding:4px 6px;border-radius:4px;font-family:monospace}
+  button{padding:7px 13px;border:none;border-radius:5px;cursor:pointer;font-family:monospace;font-size:11px;font-weight:bold}
+  button:hover:not(:disabled){filter:brightness(1.2)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  .red{background:#7f1d1d;color:#fca5a5}
+  .green{background:#14532d;color:#86efac}
+  .blue{background:#1e3a8a;color:#93c5fd}
+  .orange{background:#7c2d12;color:#fdba74}
+  .purple{background:#4c1d95;color:#c4b5fd}
+  .note{color:#444;font-size:11px;margin:6px 0 0}
+  #log{background:#050505;border:1px solid #1a1a1a;padding:12px;border-radius:6px;white-space:pre-wrap;font-size:11px;line-height:1.8;min-height:140px;max-height:420px;overflow-y:auto;margin-top:14px}
+  .ok{color:#4ade80}.err{color:#f87171}.inf{color:#60a5fa}.warn{color:#fb923c}
+</style>
+</head>
+<body>
+<h1>🎬 Cinetra — Panel Completo de Scraping</h1>
+<p class="sub">Backend: https://web-production-b7f0d.up.railway.app &nbsp;|&nbsp; Firestore: cinetra-1fa9c</p>
+
+<!-- PASO 1 -->
+<div class="card">
+  <h3>⚠️ Paso 1 — Limpiar datos existentes</h3>
+  <div class="row">
+    <button class="red" onclick="del('peliculas')">🗑 Películas</button>
+    <button class="red" onclick="del('series')">🗑 Series</button>
+    <button class="red" onclick="del('anime')">🗑 Anime</button>
+    <button class="red" onclick="del('partidos')">🗑 Partidos</button>
+    <button class="red" onclick="del('canales')">🗑 Canales TV</button>
+  </div>
+</div>
+
+<!-- PASO 2: PELÍCULAS -->
+<div class="card">
+  <h3>🎬 Paso 2 — Películas (con embed URL incluido)</h3>
+  <div class="row">
+    <label>Páginas: <input type="number" id="pagesMovies" value="10" min="1" max="500"></label>
+  </div>
+  <div class="row">
+    <button class="green" onclick="pages('poseidon-movies','pagesMovies')">▶ PoseidonHD Películas</button>
+    <button class="green" onclick="pages('juanita-movies','pagesMovies')">▶ Juanita Películas</button>
+  </div>
+</div>
+
+<!-- PASO 3: SERIES -->
+<div class="card">
+  <h3>📺 Paso 3 — Series (con episodios)</h3>
+  <div class="row">
+    <label>Páginas: <input type="number" id="pagesSeries" value="10" min="1" max="200"></label>
+    <label style="margin-left:12px">Batch enrich: <input type="number" id="batchSeries" value="5" min="1" max="20"></label>
+  </div>
+  <div class="row">
+    <button class="green" onclick="pages('poseidon-series','pagesSeries')">▶ PoseidonHD Series</button>
+    <button class="green" onclick="pages('juanita-series','pagesSeries')">▶ Juanita Series</button>
+  </div>
+  <div class="row">
+    <button class="orange" onclick="loop('enrich-juanita','batchSeries')">▶ Enriquecer Series Juanita</button>
+    <button class="orange" onclick="loop('poseidon-episodes','batchSeries')">▶ Episodios PoseidonHD</button>
+  </div>
+</div>
+
+<!-- PASO 4: ANIME -->
+<div class="card">
+  <h3>⛩️ Paso 4 — Anime (AnimeFLV + JKAnime)</h3>
+  <div class="row">
+    <label>Páginas: <input type="number" id="pagesAnime" value="10" min="1" max="200"></label>
+    <label style="margin-left:12px">Batch enrich: <input type="number" id="batchAnime" value="5" min="1" max="20"></label>
+  </div>
+  <div class="row">
+    <button class="green" onclick="pages('animeflv','pagesAnime')">▶ AnimeFLV</button>
+    <button class="green" onclick="pages('jkanime','pagesAnime')">▶ JKAnime</button>
+  </div>
+  <div class="row">
+    <button class="orange" onclick="loop('enrich-anime','batchAnime')">▶ Enriquecer Anime (sinopsis + episodios)</button>
+  </div>
+</div>
+
+<!-- PASO 5: DEPORTES -->
+<div class="card">
+  <h3>⚽ Paso 5 — Deportes en Vivo + Canales TV</h3>
+  <div class="row">
+    <button class="blue" onclick="once('futbol')">⚽ Partidos de Hoy (JJFutbol)</button>
+    <button class="purple" onclick="recoverCanales()">📺 Recuperar Canales desde Supabase</button>
+  </div>
+  <p class="note">Los partidos se actualizan automáticamente cada 15 min via cron en Railway.</p>
+</div>
+
+<!-- LOG -->
+<div id="log">Listo. Seguí los pasos en orden ↑\n</div>
+
+<script>
+const B   = 'https://web-production-b7f0d.up.railway.app';
+const KEY = 'cinetra-2024-secret';
+
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  logEl.innerHTML += '<span class="'+(cls||'inf')+'">'+new Date().toLocaleTimeString('es-AR',{hour12:false})+' — '+msg+'</span>\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function req(path, opts) {
+  const r = await fetch(B+path, {
+    headers: {'x-api-key':KEY,'Content-Type':'application/json',...((opts||{}).headers||{})},
+    ...opts
+  });
+  return r.json().catch(() => ({}));
+}
+
+async function del(col) {
+  if (!confirm('¿Borrar "'+col+'"? Esto no se puede deshacer.')) return;
+  log('Borrando '+col+'...','warn');
+  const d = await req('/api/collection/'+col, {method:'DELETE'});
+  if (d.ok) log('✓ '+col+': '+d.deleted+' docs eliminados','ok');
+  else log('✗ '+col+': '+(d.error||JSON.stringify(d)),'err');
+}
+
+async function pages(source, inputId) {
+  const n = parseInt(document.getElementById(inputId).value) || 5;
+  log('▶ '+source+' — '+n+' páginas...','inf');
+  let total = 0;
+  for (let p = 1; p <= n; p++) {
+    const d = await req('/api/scrape', {method:'POST', body:JSON.stringify({source, page:p})});
+    if (!d.ok) { log('✗ Pág '+p+': '+(d.error||'error'),'err'); break; }
+    total += d.count||0;
+    if (d.count > 0) log('  Pág '+p+': '+d.count+' guardadas | total '+total,'ok');
+    else { log('  Pág '+p+': vacía — fin','warn'); break; }
+    await sleep(700);
+  }
+  log('✓ '+source+' completado — '+total+' registros totales','ok');
+}
+
+async function once(source) {
+  log('▶ '+source+'...','inf');
+  const d = await req('/api/scrape', {method:'POST', body:JSON.stringify({source})});
+  if (d.ok) log('✓ '+source+': '+(d.count||0)+' registros','ok');
+  else log('✗ '+(d.error||JSON.stringify(d)),'err');
+}
+
+async function loop(source, batchId) {
+  const batch = parseInt(document.getElementById(batchId).value) || 5;
+  log('▶ '+source+' (batch='+batch+')...','inf');
+  let total = 0, i = 0;
+  while (i++ < 500) {
+    const d = await req('/api/scrape', {method:'POST', body:JSON.stringify({source, batch})});
+    if (!d.ok || !d.count) { log('✓ '+source+' completado — '+total+' enriquecidos','ok'); break; }
+    total += d.count;
+    log('  Batch '+i+': '+d.count+' | acum '+total,'ok');
+    await sleep(900);
+  }
+}
+
+async function recoverCanales() {
+  log('▶ Recuperando canales desde Supabase...','inf');
+  const d = await fetch(B+'/api/migrate-canales', {method:'POST', headers:{'x-api-key':KEY,'Content-Type':'application/json'}}).then(r=>r.json());
+  if (d.ok) log('✓ '+d.migrated+' canales recuperados de Supabase','ok');
+  else log('✗ '+(d.error||JSON.stringify(d)),'err');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
